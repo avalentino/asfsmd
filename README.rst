@@ -75,3 +75,9 @@ Command Line Interface
                             for the host 'urs.earthdata.nasa.gov'
       --block-size BLOCK_SIZE
                             httpio block size in bytes (default: 8192)
+
+
+License
+-------
+
+The `asfsmd` package is distributed under the MIT License.
