@@ -32,12 +32,13 @@ import asf_search as asf
 
 
 __version__ = "1.0.0"
+__all__ = ["download_annotations", "main"]
 
 
 _log = logging.getLogger(__name__)
 
 
-BLOACKSIZE=8*1024   # 8kbytes
+BLOACKSIZE = 8*1024  # 8kbytes
 
 
 class HttpIOFile(httpio.SyncHTTPIOFile):
@@ -53,13 +54,15 @@ class HttpIOFile(httpio.SyncHTTPIOFile):
                 except KeyError:
                     raise httpio.HTTPIOError(
                         "Server does not report content length")
-                if response.headers.get('Accept-Ranges', '').lower() != 'bytes':
+                accept_ranges = response.headers.get('Accept-Ranges', '')
+                if accept_ranges.lower() != 'bytes':
                     raise httpio.HTTPIOError(
                         "Server does not accept 'Range' headers")
         return self
 
 
 def query(products, auth=None):
+    """Query the specified Sentinel-1 products."""
     products = [product + '-SLC' for product in products]
     results = asf.product_search(products)
     return results
@@ -67,6 +70,7 @@ def query(products, auth=None):
 
 def download_annotations_core(urls, outdir='.', auth=None,
                               block_size=BLOACKSIZE):
+    """Download Sentinel-1 annotationd for the specified product urls."""
     outdir = pathlib.Path(outdir)
 
     patterns = [
@@ -83,7 +87,7 @@ def download_annotations_core(urls, outdir='.', auth=None,
             url_iter.set_description(url)
             product_name = pathlib.Path(urlparse(url).path).stem
             _log.debug(f'{product_name = }')
-            
+
             # if outdir.joinpath(product_name).with_suffix('.SAFE').exists():
             #     _log.debug(f'{product_name} already exists')
             #    continue
@@ -102,7 +106,7 @@ def download_annotations_core(urls, outdir='.', auth=None,
                                 break
 
                     component_iter = tqdm.tqdm(components, unit='files',
-                                               leave=False)    
+                                               leave=False)
                     for info in component_iter:
                         filename = pathlib.Path(info.filename)
                         component_iter.set_description(filename.name)
@@ -121,6 +125,7 @@ def download_annotations_core(urls, outdir='.', auth=None,
 
 
 def download_annotations(products, outdir='.', auth=None):
+    """Download annotationd for the specified Sentinel-1 products."""
     results = query(products, auth=auth)
     if len(results) != len(products):
         warnings.warn(
@@ -138,7 +143,7 @@ def _get_auth(*, user=None, pwd=None, hostname='urs.earthdata.nasa.gov'):
     elif user is None and pwd is None:
         db = netrc.netrc()
         user, _, pwd = db.authenticators(hostname)
-        return user, pwd    
+        return user, pwd
     else:
         raise ValueError(
             "Both username and password must be provided to authenticate.")
@@ -167,7 +172,7 @@ def _autocomplete(parser):
 
 
 def _set_logging_control_args(parser, default_loglevel='WARNING'):
-    """Setup command line options for logging control."""
+    """Set up command line options for logging control."""
     loglevels = [logging.getLevelName(level) for level in range(10, 60, 10)]
 
     parser.add_argument(
@@ -212,7 +217,7 @@ def _get_parser(subparsers=None):
     parser.add_argument(
         "-o", "--outdir", default=".",
         help="path of the output directory (default='%(default)s')")
-    
+
     parser.add_argument(
         "-u", "--username",
         help="username for ASF authentication. "
@@ -256,14 +261,14 @@ def _parse_args(args=None, namespace=None, parser=None):
 
 
 def main(*argv):
-    """Main CLI interface."""
+    """Implement the main CLI interface."""
     # setup logging
     logging.basicConfig(format=LOGFMT, level=logging.INFO)  # stream=sys.stdout
     logging.captureWarnings(True)
 
     # parse cmd line arguments
     args = _parse_args(argv if argv else None)
-    
+
     # execute main tasks
     exit_code = EX_OK
     try:
