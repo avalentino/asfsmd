@@ -38,7 +38,7 @@ __all__ = ["download_annotations", "main"]
 _log = logging.getLogger(__name__)
 
 
-BLOACKSIZE = 8*1024  # 8kbytes
+BLOACKSIZE = 8 * 1024  # 8kbytes
 
 
 class HttpIOFile(httpio.SyncHTTPIOFile):
@@ -50,53 +50,55 @@ class HttpIOFile(httpio.SyncHTTPIOFile):
             with response:
                 response.raise_for_status()
                 try:
-                    self.length = int(response.headers['Content-Length'])
+                    self.length = int(response.headers["Content-Length"])
                 except KeyError:
                     raise httpio.HTTPIOError(
-                        "Server does not report content length")
-                accept_ranges = response.headers.get('Accept-Ranges', '')
-                if accept_ranges.lower() != 'bytes':
+                        "Server does not report content length"
+                    )
+                accept_ranges = response.headers.get("Accept-Ranges", "")
+                if accept_ranges.lower() != "bytes":
                     raise httpio.HTTPIOError(
-                        "Server does not accept 'Range' headers")
+                        "Server does not accept 'Range' headers"
+                    )
         return self
 
 
 def query(products, auth=None):
     """Query the specified Sentinel-1 products."""
-    products = [product + '-SLC' for product in products]
+    products = [product + "-SLC" for product in products]
     results = asf.product_search(products)
     return results
 
 
-def download_annotations_core(urls, outdir='.', auth=None,
+def download_annotations_core(urls, outdir=".", auth=None,
                               block_size=BLOACKSIZE):
     """Download Sentinel-1 annotationd for the specified product urls."""
     outdir = pathlib.Path(outdir)
 
     patterns = [
-        'S1*.SAFE/manifest.safe',
-        'S1*.SAFE/annotation/s1*.xml'
+        "S1*.SAFE/manifest.safe",
+        "S1*.SAFE/annotation/s1*.xml",
     ]
 
     with requests.Session() as session:
         session.auth = auth
-        _log.debug('session open')
+        _log.debug("session open")
 
-        url_iter = tqdm.tqdm(urls, unit=' products')
+        url_iter = tqdm.tqdm(urls, unit=" products")
         for url in url_iter:
             url_iter.set_description(url)
             product_name = pathlib.Path(urlparse(url).path).stem
-            _log.debug(f'{product_name = }')
+            _log.debug(f"{product_name = }")
 
             # if outdir.joinpath(product_name).with_suffix('.SAFE').exists():
             #     _log.debug(f'{product_name} already exists')
             #    continue
 
-            _log.debug(f'download: {product_name}')
+            _log.debug(f"download: {product_name}")
 
             remote_file = HttpIOFile(url, block_size=block_size)
             with remote_file.open(session=session) as fd:
-                _log.debug(f'{url} open')
+                _log.debug(f"{url} open")
                 with zipfile.ZipFile(fd) as zf:
                     components = []
                     for info in zf.filelist:
@@ -105,39 +107,41 @@ def download_annotations_core(urls, outdir='.', auth=None,
                                 components.append(info)
                                 break
 
-                    component_iter = tqdm.tqdm(components, unit='files',
-                                               leave=False)
+                    component_iter = tqdm.tqdm(
+                        components, unit="files", leave=False
+                    )
                     for info in component_iter:
                         filename = pathlib.Path(info.filename)
                         component_iter.set_description(filename.name)
                         targetdir = outdir / filename.parent
                         outfile = targetdir / filename.name
-                        _log.debug(f'{targetdir = }')
-                        _log.debug(f'{outfile = }')
+                        _log.debug(f"{targetdir = }")
+                        _log.debug(f"{outfile = }")
                         targetdir.mkdir(exist_ok=True, parents=True)
                         if outfile.exists():
-                            _log.debug(f'{outfile = } exists')
+                            _log.debug(f"{outfile = } exists")
                             continue
                         # zf.extract(info, str(targetdir))
                         data = zf.read(info)
                         outfile.write_bytes(data)
-                        _log.debug(f'{info.filename} extracted')
+                        _log.debug(f"{info.filename} extracted")
 
 
-def download_annotations(products, outdir='.', auth=None):
+def download_annotations(products, outdir=".", auth=None):
     """Download annotationd for the specified Sentinel-1 products."""
     results = query(products, auth=auth)
     if len(results) != len(products):
         warnings.warn(
             f"only {len(results)} of the {len(products)} requested products "
-            f"found on the remote server")
+            f"found on the remote server"
+        )
 
-    urls = [item.properties['url'] for item in results]
+    urls = [item.properties["url"] for item in results]
 
     download_annotations_core(urls, outdir=outdir, auth=auth)
 
 
-def _get_auth(*, user=None, pwd=None, hostname='urs.earthdata.nasa.gov'):
+def _get_auth(*, user=None, pwd=None, hostname="urs.earthdata.nasa.gov"):
     if user is not None and pwd is not None:
         return user, pwd
     elif user is None and pwd is None:
@@ -146,7 +150,8 @@ def _get_auth(*, user=None, pwd=None, hostname='urs.earthdata.nasa.gov'):
         return user, pwd
     else:
         raise ValueError(
-            "Both username and password must be provided to authenticate.")
+            "Both username and password must be provided to authenticate."
+        )
 
 
 # === Command Line Interface ==================================================
@@ -159,7 +164,7 @@ except ImportError:
 EX_FAILURE = 1
 EX_INTERRUPT = 130
 
-LOGFMT = '%(asctime)s %(levelname)-8s -- %(message)s'
+LOGFMT = "%(asctime)s %(levelname)-8s -- %(message)s"
 
 
 def _autocomplete(parser):
@@ -171,24 +176,41 @@ def _autocomplete(parser):
         argcomplete.autocomplete(parser)
 
 
-def _set_logging_control_args(parser, default_loglevel='WARNING'):
+def _set_logging_control_args(parser, default_loglevel="WARNING"):
     """Set up command line options for logging control."""
     loglevels = [logging.getLevelName(level) for level in range(10, 60, 10)]
 
     parser.add_argument(
-        '--loglevel', default=default_loglevel, choices=loglevels,
-        help='logging level (default: %(default)s)')
+        "--loglevel",
+        default=default_loglevel,
+        choices=loglevels,
+        help="logging level (default: %(default)s)",
+    )
     parser.add_argument(
-        '-q', '--quiet', dest='loglevel', action='store_const',
-        const='ERROR',
-        help='suppress standard output messages, '
-             'only errors are printed to screen')
+        "-q",
+        "--quiet",
+        dest="loglevel",
+        action="store_const",
+        const="ERROR",
+        help="suppress standard output messages, "
+        "only errors are printed to screen",
+    )
     parser.add_argument(
-        '-v', '--verbose', dest='loglevel', action='store_const',
-        const='INFO', help='print verbose output messages')
+        "-v",
+        "--verbose",
+        dest="loglevel",
+        action="store_const",
+        const="INFO",
+        help="print verbose output messages",
+    )
     parser.add_argument(
-        '-d', '--debug', dest='loglevel', action='store_const',
-        const='DEBUG', help='print debug messages')
+        "-d",
+        "--debug",
+        dest="loglevel",
+        action="store_const",
+        const="DEBUG",
+        help="print debug messages",
+    )
 
     return parser
 
@@ -202,7 +224,8 @@ def _get_parser(subparsers=None):
     if subparsers is None:
         parser = argparse.ArgumentParser(prog=name, description=doc)
         parser.add_argument(
-            "--version", action="version", version='%(prog)s v' + __version__)
+            "--version", action="version", version="%(prog)s v" + __version__
+        )
     else:
         parser = subparsers.add_parser(name, description=doc, help=synopsis)
         # parser.set_defaults(func=info)
@@ -211,35 +234,51 @@ def _get_parser(subparsers=None):
 
     # Command line options
     parser.add_argument(
-        "-f", "--file-list", action="store_true",
+        "-f",
+        "--file-list",
+        action="store_true",
         help="read the list of products form file. "
-             "The file is expected to contain one product name per line.")
+        "The file is expected to contain one product name per line.",
+    )
     parser.add_argument(
-        "-o", "--outdir", default=".",
-        help="path of the output directory (default='%(default)s')")
+        "-o",
+        "--outdir",
+        default=".",
+        help="path of the output directory (default='%(default)s')",
+    )
 
     parser.add_argument(
-        "-u", "--username",
+        "-u",
+        "--username",
         help="username for ASF authentication. "
-             "If not provided the tool attempts to retireve the "
-             "authentication parameters for the user's '.netrc' file looking "
-             "for the host 'urs.earthdata.nasa.gov'")
+        "If not provided the tool attempts to retireve the "
+        "authentication parameters for the user's '.netrc' file looking "
+        "for the host 'urs.earthdata.nasa.gov'",
+    )
     parser.add_argument(
-        "-p", "--password",
+        "-p",
+        "--password",
         help="password for ASF authentication. "
-             "If not provided the tool attempts to retireve the "
-             "authentication parameters for the user's '.netrc' file looking "
-             "for the host 'urs.earthdata.nasa.gov'")
+        "If not provided the tool attempts to retireve the "
+        "authentication parameters for the user's '.netrc' file looking "
+        "for the host 'urs.earthdata.nasa.gov'",
+    )
     parser.add_argument(
-        "--block-size", type=int, default=BLOACKSIZE,
-        help="httpio block size in bytes (default: %(default)d)")
+        "--block-size",
+        type=int,
+        default=BLOACKSIZE,
+        help="httpio block size in bytes (default: %(default)d)",
+    )
 
     # Positional arguments
     parser.add_argument(
-        "inputs", nargs="+", metavar="INPUT",
+        "inputs",
+        nargs="+",
+        metavar="INPUT",
         help="Sentinel-1 product name(s). "
-             "If the '-f' flag is set then the argument is interpreted as "
-             "the filename containing the list of products.")
+        "If the '-f' flag is set then the argument is interpreted as "
+        "the filename containing the list of products.",
+    )
 
     if subparsers is None:
         _autocomplete(parser)
@@ -279,7 +318,8 @@ def main(*argv):
             for filename in args.inputs:
                 filename = pathlib.Path(filename)
                 products.extend(
-                    line for line in filename.read_text().splitlines() if line)
+                    line for line in filename.read_text().splitlines() if line
+                )
         else:
             products.extend(args.inputs)
 
@@ -288,16 +328,18 @@ def main(*argv):
         download_annotations(products, outdir=args.outdir, auth=auth)
     except Exception as exc:
         _log.critical(
-            'unexpected exception caught: {!r} {}'.format(
-                type(exc).__name__, exc))
-        _log.debug('stacktrace:', exc_info=True)
+            "unexpected exception caught: {!r} {}".format(
+                type(exc).__name__, exc
+            )
+        )
+        _log.debug("stacktrace:", exc_info=True)
         exit_code = EX_FAILURE
     except KeyboardInterrupt:
-        _log.warning('Keyboard interrupt received: exit the program')
+        _log.warning("Keyboard interrupt received: exit the program")
         exit_code = EX_INTERRUPT
 
     return exit_code
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())
