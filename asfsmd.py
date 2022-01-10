@@ -38,7 +38,7 @@ __all__ = ["download_annotations", "main"]
 _log = logging.getLogger(__name__)
 
 
-BLOACKSIZE = 8 * 1024  # 8kbytes
+BLOACKSIZE = 1 * 1024  # 1kb
 
 
 class HttpIOFile(httpio.SyncHTTPIOFile):

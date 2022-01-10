@@ -74,7 +74,7 @@ Command Line Interface
                             parameters for the user's '.netrc' file looking
                             for the host 'urs.earthdata.nasa.gov'
       --block-size BLOCK_SIZE
-                            httpio block size in bytes (default: 8192)
+                            httpio block size in bytes (default: 1024)
 
 
 License
