@@ -65,6 +65,8 @@ class HttpIOFile(httpio.SyncHTTPIOFile):
 
 def query(products, auth=None):
     """Query the specified Sentinel-1 products."""
+    if isinstance(products, str):
+        products = [products]
     products = [product + "-SLC" for product in products]
     results = asf.product_search(products)
     return results
