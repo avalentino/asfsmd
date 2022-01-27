@@ -14,7 +14,9 @@ The `asfsmd` tool is able to retrieve only the relatively samll annotation
 files (in XML format) without downloading the entire ZIP archive.
 """
 
+import os
 import sys
+import json
 import netrc
 import fnmatch
 import logging
@@ -22,7 +24,9 @@ import pathlib
 import zipfile
 import argparse
 import warnings
+import collections
 
+from typing import Dict, List, Union
 from urllib.parse import urlparse
 
 import tqdm
@@ -156,6 +160,15 @@ def _get_auth(*, user=None, pwd=None, hostname="urs.earthdata.nasa.gov"):
         )
 
 
+# === CLI support functions ===================================================
+def _read_from_file(filename: os.PathLike) -> Union[List[str], Dict[str, str]]:
+    filename = pathlib.Path(filename)
+    if filename.suffix == '.json':
+        return json.loads(filename.read_text())
+    else:
+        return [line for line in filename.read_text().splitlines() if line]
+
+
 # === Command Line Interface ==================================================
 
 
@@ -240,7 +253,13 @@ def _get_parser(subparsers=None):
         "--file-list",
         action="store_true",
         help="read the list of products form file. "
-        "The file is expected to contain one product name per line.",
+        "The file can me a JSON file (with '.json' extension) or a text file."
+        "The text file is expected to contain one product name per line."
+        "The json file can contain a list of products or a dictionary "
+        "containint a list of products for each key."
+        "In this case the key is used as sub-folder name to store the "
+        "corresponding products."
+        "Example: <OUTDIR>/<KEY>/<PRODUCT>",
     )
     parser.add_argument(
         "-o",
@@ -279,7 +298,8 @@ def _get_parser(subparsers=None):
         metavar="INPUT",
         help="Sentinel-1 product name(s). "
         "If the '-f' flag is set then the argument is interpreted as "
-        "the filename containing the list of products.",
+        "the filename containing the list of products. "
+        "See '--file--list' option desctiption for more details",
     )
 
     if subparsers is None:
@@ -315,19 +335,25 @@ def main(*argv):
     try:
         _log.setLevel(args.loglevel)
 
-        products = []
+        rootkey = ''
+        products_tree = collections.defaultdict(list)
         if args.file_list:
             for filename in args.inputs:
                 filename = pathlib.Path(filename)
-                products.extend(
-                    line for line in filename.read_text().splitlines() if line
-                )
-        else:
-            products.extend(args.inputs)
+                new_product = _read_from_file(filename)
+                if isinstance(new_product, list):
+                    products_tree[rootkey].extend(new_product)
+                else:
+                    assert isinstance(new_product, dict)
+                    products_tree.update(new_product)
 
         auth = _get_auth(user=args.username, pwd=args.password)
-
-        download_annotations(products, outdir=args.outdir, auth=auth)
+        
+        outroot = pathlib.Path(args.outdir)
+        for folder, products in products_tree.items():
+            outpath = outroot / folder
+            download_annotations(products, outdir=outpath, auth=auth)
+        
     except Exception as exc:
         _log.critical(
             "unexpected exception caught: {!r} {}".format(
