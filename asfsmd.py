@@ -350,7 +350,9 @@ def main(*argv):
         auth = _get_auth(user=args.username, pwd=args.password)
         
         outroot = pathlib.Path(args.outdir)
-        for folder, products in products_tree.items():
+        items = pbar = tqdm.tqdm(products_tree.items())
+        for folder, products in items:
+            pbar.set_description(folder if folder else 'DOWNLOAD')
             outpath = outroot / folder
             download_annotations(products, outdir=outpath, auth=auth)
         
