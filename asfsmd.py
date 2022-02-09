@@ -253,7 +253,7 @@ def _get_parser(subparsers=None):
         "--file-list",
         action="store_true",
         help="read the list of products form file. "
-        "The file can me a JSON file (with '.json' extension) or a text file."
+        "The file can be a JSON file (with '.json' extension) or a text file."
         "The text file is expected to contain one product name per line."
         "The json file can contain a list of products or a dictionary "
         "containint a list of products for each key."
@@ -346,6 +346,8 @@ def main(*argv):
                 else:
                     assert isinstance(new_product, dict)
                     products_tree.update(new_product)
+        else:
+            products_tree[""].extend(args.inputs)
 
         auth = _get_auth(user=args.username, pwd=args.password)
         
