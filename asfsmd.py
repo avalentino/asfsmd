@@ -42,7 +42,7 @@ __all__ = ["download_annotations", "main"]
 _log = logging.getLogger(__name__)
 
 
-BLOACKSIZE = 1 * 1024  # 1kb
+BLOCKSIZE = 1 * 1024  # 1kb
 
 
 class HttpIOFile(httpio.SyncHTTPIOFile):
@@ -77,7 +77,7 @@ def query(products, auth=None):
 
 
 def download_annotations_core(urls, outdir=".", auth=None,
-                              block_size=BLOACKSIZE):
+                              block_size=BLOCKSIZE):
     """Download Sentinel-1 annotationd for the specified product urls."""
     outdir = pathlib.Path(outdir)
 
@@ -287,7 +287,7 @@ def _get_parser(subparsers=None):
     parser.add_argument(
         "--block-size",
         type=int,
-        default=BLOACKSIZE,
+        default=BLOCKSIZE,
         help="httpio block size in bytes (default: %(default)d)",
     )
 
