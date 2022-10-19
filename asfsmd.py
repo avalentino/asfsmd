@@ -94,17 +94,17 @@ def download_annotations_core(urls, outdir=".", auth=None,
         for url in url_iter:
             url_iter.set_description(url)
             product_name = pathlib.Path(urlparse(url).path).stem
-            _log.debug(f"{product_name = }")
+            _log.debug("product_name = %r", product_name)
 
             # if outdir.joinpath(product_name).with_suffix('.SAFE').exists():
-            #     _log.debug(f'{product_name} already exists')
+            #     _log.debug("%r already exists", product_name)
             #    continue
 
-            _log.debug(f"download: {product_name}")
+            _log.debug("download: %r", product_name)
 
             remote_file = HttpIOFile(url, block_size=block_size)
             with remote_file.open(session=session) as fd:
-                _log.debug(f"{url} open")
+                _log.debug("%s open", url)
                 with zipfile.ZipFile(fd) as zf:
                     components = []
                     for info in zf.filelist:
@@ -121,16 +121,16 @@ def download_annotations_core(urls, outdir=".", auth=None,
                         component_iter.set_description(filename.name)
                         targetdir = outdir / filename.parent
                         outfile = targetdir / filename.name
-                        _log.debug(f"{targetdir = }")
-                        _log.debug(f"{outfile = }")
+                        _log.debug("targetdir = %r", targetdir)
+                        _log.debug("outfile = %r", outfile)
                         targetdir.mkdir(exist_ok=True, parents=True)
                         if outfile.exists():
-                            _log.debug(f"{outfile = } exists")
+                            _log.debug("outfile = %r exists", outfile)
                             continue
                         # zf.extract(info, str(targetdir))
                         data = zf.read(info)
                         outfile.write_bytes(data)
-                        _log.debug(f"{info.filename} extracted")
+                        _log.debug("%r extracted", info.filename)
 
 
 def download_annotations(products, outdir=".", auth=None):
