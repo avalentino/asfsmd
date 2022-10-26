@@ -77,8 +77,8 @@ def query(products, auth=None):
 
 
 def download_annotations_core(urls, outdir=".", auth=None,
-                              block_size=BLOCKSIZE):
-    """Download Sentinel-1 annotationd for the specified product urls."""
+                              block_size=BLOCKSIZE, pol=None):
+    """Download Sentinel-1 annotation for the specified product urls."""
     outdir = pathlib.Path(outdir)
 
     patterns = [
@@ -110,8 +110,9 @@ def download_annotations_core(urls, outdir=".", auth=None,
                     for info in zf.filelist:
                         for pattern in patterns:
                             if fnmatch.fnmatch(info.filename, pattern):
-                                components.append(info)
-                                break
+                                if pol and pol in info.filename:
+                                    components.append(info)
+                                    break
 
                     component_iter = tqdm.tqdm(
                         components, unit="files", leave=False
@@ -133,7 +134,7 @@ def download_annotations_core(urls, outdir=".", auth=None,
                         _log.debug(f"{info.filename} extracted")
 
 
-def download_annotations(products, outdir=".", auth=None):
+def download_annotations(products, outdir=".", auth=None, pol=None):
     """Download annotationd for the specified Sentinel-1 products."""
     results = query(products, auth=auth)
     if len(results) != len(products):
@@ -144,7 +145,7 @@ def download_annotations(products, outdir=".", auth=None):
 
     urls = [item.properties["url"] for item in results]
 
-    download_annotations_core(urls, outdir=outdir, auth=auth)
+    download_annotations_core(urls, outdir=outdir, auth=auth, pol=pol)
 
 
 def _get_auth(*, user=None, pwd=None, hostname="urs.earthdata.nasa.gov"):
@@ -252,11 +253,11 @@ def _get_parser(subparsers=None):
         "-f",
         "--file-list",
         action="store_true",
-        help="read the list of products form file. "
+        help="read the list of products from a file. "
         "The file can be a JSON file (with '.json' extension) or a text file."
         "The text file is expected to contain one product name per line."
         "The json file can contain a list of products or a dictionary "
-        "containint a list of products for each key."
+        "containing a list of products for each key."
         "In this case the key is used as sub-folder name to store the "
         "corresponding products."
         "Example: <OUTDIR>/<KEY>/<PRODUCT>",
@@ -289,6 +290,15 @@ def _get_parser(subparsers=None):
         type=int,
         default=BLOCKSIZE,
         help="httpio block size in bytes (default: %(default)d)",
+    )
+    # Optional filters
+    parser.add_argument(
+        "--pol",
+        "--polarization",
+        choices=["vv", "vh"],
+        type=str.lower,
+        help="Choose only one polarization to download. "
+        "If not provided both polarizations are downloaded."
     )
 
     # Positional arguments
@@ -347,7 +357,9 @@ def main(*argv):
                     assert isinstance(new_product, dict)
                     products_tree.update(new_product)
         else:
-            products_tree[""].extend(args.inputs)
+            # Ignore if user passed files with .zip or .SAFE extensions
+            inputs = [p.replace(".zip", "").replace(".SAFE", "") for p in args.inputs]
+            products_tree[""].extend(inputs)
 
         auth = _get_auth(user=args.username, pwd=args.password)
         
@@ -356,7 +368,9 @@ def main(*argv):
         for folder, products in items:
             pbar.set_description(folder if folder else 'DOWNLOAD')
             outpath = outroot / folder
-            download_annotations(products, outdir=outpath, auth=auth)
+            download_annotations(
+                products, outdir=outpath, auth=auth, pol=args.pol
+            )
         
     except Exception as exc:
         _log.critical(
