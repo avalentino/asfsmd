@@ -67,7 +67,7 @@ class HttpIOFile(httpio.SyncHTTPIOFile):
         return self
 
 
-def query(products, auth=None):
+def query(products):
     """Query the specified Sentinel-1 products."""
     if isinstance(products, str):
         products = [products]
@@ -136,7 +136,7 @@ def download_annotations_core(urls, outdir=".", auth=None,
 
 def download_annotations(products, outdir=".", auth=None, pol=None):
     """Download annotationd for the specified Sentinel-1 products."""
-    results = query(products, auth=auth)
+    results = query(products)
     if len(results) != len(products):
         warnings.warn(
             f"only {len(results)} of the {len(products)} requested products "
