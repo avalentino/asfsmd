@@ -81,10 +81,10 @@ def download_annotations_core(urls, outdir=".", auth=None,
     """Download Sentinel-1 annotation for the specified product urls."""
     outdir = pathlib.Path(outdir)
 
-    patterns = [
-        "S1*.SAFE/manifest.safe",
-        "S1*.SAFE/annotation/s1*.xml",
-    ]
+    patterns = {
+        "S1*.SAFE/manifest.safe": '',
+        "S1*.SAFE/annotation/s1*.xml": pol or '',
+    }
 
     with requests.Session() as session:
         session.auth = auth
@@ -108,9 +108,10 @@ def download_annotations_core(urls, outdir=".", auth=None,
                 with zipfile.ZipFile(fd) as zf:
                     components = []
                     for info in zf.filelist:
-                        for pattern in patterns:
+                        for pattern, filter in patterns.items():
                             if fnmatch.fnmatch(info.filename, pattern):
-                                if pol and pol in info.filename:
+                                # TODO: cleaner vers
+                                if filter in info.filename:
                                     components.append(info)
                                     break
 
@@ -134,16 +135,17 @@ def download_annotations_core(urls, outdir=".", auth=None,
                         _log.debug(f"{info.filename} extracted")
 
 
-def download_annotations(products, outdir=".", auth=None, pol=None):
-    """Download annotationd for the specified Sentinel-1 products."""
-    results = query(products)
-    if len(results) != len(products):
-        warnings.warn(
-            f"only {len(results)} of the {len(products)} requested products "
-            f"found on the remote server"
-        )
+def download_annotations(products, outdir=".", auth=None, pol=None, urls=None):
+    """Download annotations for the specified Sentinel-1 products."""
+    if urls is None:
+        results = query(products)
+        if len(results) != len(products):
+            warnings.warn(
+                f"only {len(results)} of the {len(products)} requested products "
+                f"found on the remote server"
+            )
 
-    urls = [item.properties["url"] for item in results]
+        urls = [item.properties["url"] for item in results]
 
     download_annotations_core(urls, outdir=outdir, auth=auth, pol=pol)
 
@@ -300,16 +302,22 @@ def _get_parser(subparsers=None):
         help="Choose only one polarization to download. "
         "If not provided both polarizations are downloaded."
     )
+    # Alternate way to get urls
+    parser.add_argument(
+        "--urls",
+        nargs="*",
+        help="Directly pass the urls from a query to the ASF API. "
+    )
 
     # Positional arguments
     parser.add_argument(
         "inputs",
-        nargs="+",
+        nargs="*",
         metavar="INPUT",
         help="Sentinel-1 product name(s). "
         "If the '-f' flag is set then the argument is interpreted as "
         "the filename containing the list of products. "
-        "See '--file--list' option desctiption for more details",
+        "See '--file--list' option description for more details",
     )
 
     if subparsers is None:
@@ -369,7 +377,7 @@ def main(*argv):
             pbar.set_description(folder if folder else 'DOWNLOAD')
             outpath = outroot / folder
             download_annotations(
-                products, outdir=outpath, auth=auth, pol=args.pol
+                products, outdir=outpath, auth=auth, pol=args.pol, urls=args.urls
             )
         
     except Exception as exc:
