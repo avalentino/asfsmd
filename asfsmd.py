@@ -110,7 +110,6 @@ def download_annotations_core(urls, outdir=".", auth=None,
                     for info in zf.filelist:
                         for pattern, filter in patterns.items():
                             if fnmatch.fnmatch(info.filename, pattern):
-                                # TODO: cleaner vers
                                 if filter in info.filename:
                                     components.append(info)
                                     break
