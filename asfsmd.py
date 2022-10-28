@@ -77,14 +77,24 @@ def query(products):
 
 
 def download_annotations_core(urls, outdir=".", auth=None,
-                              block_size=BLOCKSIZE, pol=None):
+                              block_size=BLOCKSIZE, pol=None,
+                              do_calibration=False, do_noise=False,
+                              do_rfi=False):
     """Download Sentinel-1 annotation for the specified product urls."""
     outdir = pathlib.Path(outdir)
 
+    pol_filter = pol or ''  # empty string matches all polarizations
+
     patterns = {
         "S1*.SAFE/manifest.safe": '',
-        "S1*.SAFE/annotation/s1*.xml": pol or '',
+        "S1*.SAFE/annotation/s1*.xml": pol_filter
     }
+    if do_calibration:
+        patterns["S1*.SAFE/annotation/calibration/calibration*.xml"] = pol_filter
+    if do_noise:
+        patterns["S1*.SAFE/annotation/calibration/noise*.xml"] = pol_filter
+    if do_rfi:
+        patterns["S1*.SAFE/annotation/rfi/rfi*.xml"] = pol_filter
 
     with requests.Session() as session:
         session.auth = auth
@@ -134,7 +144,8 @@ def download_annotations_core(urls, outdir=".", auth=None,
                         _log.debug(f"{info.filename} extracted")
 
 
-def download_annotations(products, outdir=".", auth=None, pol=None, urls=None):
+def download_annotations(products, outdir=".", auth=None, pol=None, urls=None,
+                         do_calibration=False, do_noise=False, do_rfi=False):
     """Download annotations for the specified Sentinel-1 products."""
     if urls is None:
         results = query(products)
@@ -146,7 +157,9 @@ def download_annotations(products, outdir=".", auth=None, pol=None, urls=None):
 
         urls = [item.properties["url"] for item in results]
 
-    download_annotations_core(urls, outdir=outdir, auth=auth, pol=pol)
+    download_annotations_core(urls, outdir=outdir, auth=auth, pol=pol,
+                              do_calibration=do_calibration, do_noise=do_noise,
+                              do_rfi=do_rfi)
 
 
 def _get_auth(*, user=None, pwd=None, hostname="urs.earthdata.nasa.gov"):
@@ -300,12 +313,29 @@ def _get_parser(subparsers=None):
         type=str.lower,
         help="Choose only one polarization to download. "
         "If not provided both polarizations are downloaded."
+    ) 
+
+    # Additional file downloads
+    parser.add_argument(
+        "--do-calibration",
+        action="store_true",
+        help="Download calibration files."
+    )
+    parser.add_argument(
+        "--do-noise",
+        action="store_true",
+        help="Download noise calibration files."
+    )
+    parser.add_argument(
+        "--do-rfi",
+        action="store_true",
+        help="Download RFI files."
     )
     # Alternate way to get urls
     parser.add_argument(
         "--urls",
         nargs="*",
-        help="Directly pass the urls from a query to the ASF API. "
+        help="Directly pass the urls from a query to the ASF API."
     )
 
     # Positional arguments
@@ -376,7 +406,9 @@ def main(*argv):
             pbar.set_description(folder if folder else 'DOWNLOAD')
             outpath = outroot / folder
             download_annotations(
-                products, outdir=outpath, auth=auth, pol=args.pol, urls=args.urls
+                products, outdir=outpath, auth=auth, pol=args.pol, urls=args.urls,
+                do_calibration=args.do_calibration, do_noise=args.do_noise,
+                do_rfi=args.do_rfi
             )
         
     except Exception as exc:
