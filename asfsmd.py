@@ -278,6 +278,11 @@ def _get_parser(subparsers=None):
         "Example: <OUTDIR>/<KEY>/<PRODUCT>",
     )
     parser.add_argument(
+        "--urls",
+        action="store_true",
+        help="Indicate the inputs are a list of URLs from ASF."
+    )
+    parser.add_argument(
         "-o",
         "--outdir",
         default=".",
@@ -334,12 +339,6 @@ def _get_parser(subparsers=None):
         action="store_true",
         help="Download RFI files."
     )
-    # Alternate way to get urls
-    parser.add_argument(
-        "--urls",
-        nargs="*",
-        help="Directly pass the urls from a query to the ASF API."
-    )
 
     # Positional arguments
     parser.add_argument(
@@ -385,6 +384,9 @@ def main(*argv):
     try:
         _log.setLevel(args.loglevel)
 
+        auth = _get_auth(user=args.username, pwd=args.password)
+        outroot = pathlib.Path(args.outdir)
+
         rootkey = ''
         products_tree = collections.defaultdict(list)
         if args.file_list:
@@ -396,20 +398,24 @@ def main(*argv):
                 else:
                     assert isinstance(new_product, dict)
                     products_tree.update(new_product)
+        elif args.urls:
+            urls = args.inputs
+            patterns = _make_pattern_filters(
+                pol=args.polarization, do_calibration=args.calibration,
+                do_noise=args.noise, do_rfi=args.rfi
+            )
+            download_components_from_urls(urls, patterns, outdir=outroot, auth=auth)
         else:
             # Ignore if user passed files with .zip or .SAFE extensions
             inputs = [p.replace(".zip", "").replace(".SAFE", "") for p in args.inputs]
             products_tree[""].extend(inputs)
 
-        auth = _get_auth(user=args.username, pwd=args.password)
-        
-        outroot = pathlib.Path(args.outdir)
         items = pbar = tqdm.tqdm(products_tree.items())
         for folder, products in items:
             pbar.set_description(folder if folder else 'DOWNLOAD')
             outpath = outroot / folder
             download_annotations(
-                products, outdir=outpath, auth=auth, pol=args.pol,
+                products, outdir=outpath, auth=auth, pol=args.polarization,
                 do_calibration=args.calibration, do_noise=args.noise,
                 do_rfi=args.rfi
             )
