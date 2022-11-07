@@ -10,7 +10,7 @@ Sentinel-1 products are stored in the ASF arcive as ZIP files that are
 quite large because they comntain both the products annotations and the
 binary image data.
 
-The `asfsmd` tool is able to retrieve only the relatively samll annotation
+The `asfsmd` tool is able to retrieve only the relatively small annotation
 files (in XML format) without downloading the entire ZIP archive.
 """
 
@@ -293,7 +293,7 @@ def _get_parser(subparsers=None):
         "-u",
         "--username",
         help="username for ASF authentication. "
-        "If not provided the tool attempts to retireve the "
+        "If not provided the tool attempts to retrieve the "
         "authentication parameters for the user's '.netrc' file looking "
         "for the host 'urs.earthdata.nasa.gov'",
     )
@@ -301,7 +301,7 @@ def _get_parser(subparsers=None):
         "-p",
         "--password",
         help="password for ASF authentication. "
-        "If not provided the tool attempts to retireve the "
+        "If not provided the tool attempts to retrieve the "
         "authentication parameters for the user's '.netrc' file looking "
         "for the host 'urs.earthdata.nasa.gov'",
     )
@@ -389,7 +389,16 @@ def main(*argv):
 
         rootkey = ''
         products_tree = collections.defaultdict(list)
-        if args.file_list:
+        if args.urls:
+            urls = args.inputs
+            patterns = _make_pattern_filters(
+                pol=args.polarization, do_calibration=args.calibration,
+                do_noise=args.noise, do_rfi=args.rfi
+            )
+            download_components_from_urls(urls, patterns, outdir=outroot, auth=auth)
+            # For urls passed, exit early once downloaded
+            return exit_code
+        elif args.file_list:
             for filename in args.inputs:
                 filename = pathlib.Path(filename)
                 new_product = _read_from_file(filename)
@@ -398,13 +407,6 @@ def main(*argv):
                 else:
                     assert isinstance(new_product, dict)
                     products_tree.update(new_product)
-        elif args.urls:
-            urls = args.inputs
-            patterns = _make_pattern_filters(
-                pol=args.polarization, do_calibration=args.calibration,
-                do_noise=args.noise, do_rfi=args.rfi
-            )
-            download_components_from_urls(urls, patterns, outdir=outroot, auth=auth)
         else:
             # Ignore if user passed files with .zip or .SAFE extensions
             inputs = [p.replace(".zip", "").replace(".SAFE", "") for p in args.inputs]
@@ -419,7 +421,7 @@ def main(*argv):
                 do_calibration=args.calibration, do_noise=args.noise,
                 do_rfi=args.rfi
             )
-        
+
     except Exception as exc:
         _log.critical(
             "unexpected exception caught: {!r} {}".format(
