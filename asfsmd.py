@@ -307,27 +307,29 @@ def _get_parser(subparsers=None):
     )
     # Optional filters
     parser.add_argument(
-        "--pol",
         "--polarization",
         choices=["vv", "vh"],
         type=str.lower,
         help="Choose only one polarization to download. "
         "If not provided both polarizations are downloaded."
-    ) 
+    )
 
     # Additional file downloads
     parser.add_argument(
-        "--do-calibration",
+        "-c",
+        "--calibration",
         action="store_true",
         help="Download calibration files."
     )
     parser.add_argument(
-        "--do-noise",
+        "-n",
+        "--noise",
         action="store_true",
         help="Download noise calibration files."
     )
     parser.add_argument(
-        "--do-rfi",
+        "-r",
+        "--rfi",
         action="store_true",
         help="Download RFI files."
     )
