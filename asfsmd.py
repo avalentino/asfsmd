@@ -76,13 +76,7 @@ def query(products):
     return results
 
 
-def download_annotations_core(urls, outdir=".", auth=None,
-                              block_size=BLOCKSIZE, pol=None,
-                              do_calibration=False, do_noise=False,
-                              do_rfi=False):
-    """Download Sentinel-1 annotation for the specified product urls."""
-    outdir = pathlib.Path(outdir)
-
+def _make_pattern_filters(pol=None, do_calibration=False, do_noise=False, do_rfi=False):
     pol_filter = pol or ''  # empty string matches all polarizations
 
     patterns = {
@@ -95,6 +89,13 @@ def download_annotations_core(urls, outdir=".", auth=None,
         patterns["S1*.SAFE/annotation/calibration/noise*.xml"] = pol_filter
     if do_rfi:
         patterns["S1*.SAFE/annotation/rfi/rfi*.xml"] = pol_filter
+    return patterns
+
+
+def download_components_from_urls(urls, patterns, outdir=".", auth=None,
+                                  block_size=BLOCKSIZE):
+    """Download Sentinel-1 annotation for the specified product urls."""
+    outdir = pathlib.Path(outdir)
 
     with requests.Session() as session:
         session.auth = auth
@@ -144,22 +145,22 @@ def download_annotations_core(urls, outdir=".", auth=None,
                         _log.debug(f"{info.filename} extracted")
 
 
-def download_annotations(products, outdir=".", auth=None, pol=None, urls=None,
+def download_annotations(products, outdir=".", auth=None, pol=None,
                          do_calibration=False, do_noise=False, do_rfi=False):
     """Download annotations for the specified Sentinel-1 products."""
-    if urls is None:
-        results = query(products)
-        if len(results) != len(products):
-            warnings.warn(
-                f"only {len(results)} of the {len(products)} requested products "
-                f"found on the remote server"
-            )
+    results = query(products)
+    if len(results) != len(products):
+        warnings.warn(
+            f"only {len(results)} of the {len(products)} requested products "
+            f"found on the remote server"
+        )
 
-        urls = [item.properties["url"] for item in results]
+    urls = [item.properties["url"] for item in results]
 
-    download_annotations_core(urls, outdir=outdir, auth=auth, pol=pol,
-                              do_calibration=do_calibration, do_noise=do_noise,
-                              do_rfi=do_rfi)
+    patterns = _make_pattern_filters(
+        pol=pol, do_calibration=do_calibration, do_noise=do_noise, do_rfi=do_rfi
+    )
+    download_components_from_urls(urls, patterns, outdir=outdir, auth=auth)
 
 
 def _get_auth(*, user=None, pwd=None, hostname="urs.earthdata.nasa.gov"):
@@ -408,9 +409,9 @@ def main(*argv):
             pbar.set_description(folder if folder else 'DOWNLOAD')
             outpath = outroot / folder
             download_annotations(
-                products, outdir=outpath, auth=auth, pol=args.pol, urls=args.urls,
-                do_calibration=args.do_calibration, do_noise=args.do_noise,
-                do_rfi=args.do_rfi
+                products, outdir=outpath, auth=auth, pol=args.pol,
+                do_calibration=args.calibration, do_noise=args.noise,
+                do_rfi=args.rfi
             )
         
     except Exception as exc:
