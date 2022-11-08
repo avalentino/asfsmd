@@ -10,7 +10,7 @@ Sentinel-1 products are stored in the ASF arcive as ZIP files that are
 quite large because they comntain both the products annotations and the
 binary image data.
 
-The `asfsmd` tool is able to retrieve only the relatively samll annotation
+The `asfsmd` tool is able to retrieve only the relatively small annotation
 files (in XML format) without downloading the entire ZIP archive.
 """
 
@@ -67,7 +67,7 @@ class HttpIOFile(httpio.SyncHTTPIOFile):
         return self
 
 
-def query(products, auth=None):
+def query(products):
     """Query the specified Sentinel-1 products."""
     if isinstance(products, str):
         products = [products]
@@ -76,15 +76,26 @@ def query(products, auth=None):
     return results
 
 
-def download_annotations_core(urls, outdir=".", auth=None,
-                              block_size=BLOCKSIZE):
-    """Download Sentinel-1 annotationd for the specified product urls."""
-    outdir = pathlib.Path(outdir)
+def _make_pattern_filters(pol=None, do_calibration=False, do_noise=False, do_rfi=False):
+    pol_filter = pol or ''  # empty string matches all polarizations
 
-    patterns = [
-        "S1*.SAFE/manifest.safe",
-        "S1*.SAFE/annotation/s1*.xml",
-    ]
+    patterns = {
+        "S1*.SAFE/manifest.safe": '',
+        "S1*.SAFE/annotation/s1*.xml": pol_filter
+    }
+    if do_calibration:
+        patterns["S1*.SAFE/annotation/calibration/calibration*.xml"] = pol_filter
+    if do_noise:
+        patterns["S1*.SAFE/annotation/calibration/noise*.xml"] = pol_filter
+    if do_rfi:
+        patterns["S1*.SAFE/annotation/rfi/rfi*.xml"] = pol_filter
+    return patterns
+
+
+def download_components_from_urls(urls, patterns, outdir=".", auth=None,
+                                  block_size=BLOCKSIZE):
+    """Download Sentinel-1 annotation for the specified product urls."""
+    outdir = pathlib.Path(outdir)
 
     with requests.Session() as session:
         session.auth = auth
@@ -108,10 +119,11 @@ def download_annotations_core(urls, outdir=".", auth=None,
                 with zipfile.ZipFile(fd) as zf:
                     components = []
                     for info in zf.filelist:
-                        for pattern in patterns:
+                        for pattern, filter in patterns.items():
                             if fnmatch.fnmatch(info.filename, pattern):
-                                components.append(info)
-                                break
+                                if filter in info.filename:
+                                    components.append(info)
+                                    break
 
                     component_iter = tqdm.tqdm(
                         components, unit="files", leave=False
@@ -133,9 +145,10 @@ def download_annotations_core(urls, outdir=".", auth=None,
                         _log.debug("%r extracted", info.filename)
 
 
-def download_annotations(products, outdir=".", auth=None):
-    """Download annotationd for the specified Sentinel-1 products."""
-    results = query(products, auth=auth)
+def download_annotations(products, outdir=".", auth=None, pol=None,
+                         do_calibration=False, do_noise=False, do_rfi=False):
+    """Download annotations for the specified Sentinel-1 products."""
+    results = query(products)
     if len(results) != len(products):
         warnings.warn(
             f"only {len(results)} of the {len(products)} requested products "
@@ -144,7 +157,10 @@ def download_annotations(products, outdir=".", auth=None):
 
     urls = [item.properties["url"] for item in results]
 
-    download_annotations_core(urls, outdir=outdir, auth=auth)
+    patterns = _make_pattern_filters(
+        pol=pol, do_calibration=do_calibration, do_noise=do_noise, do_rfi=do_rfi
+    )
+    download_components_from_urls(urls, patterns, outdir=outdir, auth=auth)
 
 
 def _get_auth(*, user=None, pwd=None, hostname="urs.earthdata.nasa.gov"):
@@ -252,14 +268,19 @@ def _get_parser(subparsers=None):
         "-f",
         "--file-list",
         action="store_true",
-        help="read the list of products form file. "
+        help="read the list of products from a file. "
         "The file can be a JSON file (with '.json' extension) or a text file."
         "The text file is expected to contain one product name per line."
         "The json file can contain a list of products or a dictionary "
-        "containint a list of products for each key."
+        "containing a list of products for each key."
         "In this case the key is used as sub-folder name to store the "
         "corresponding products."
         "Example: <OUTDIR>/<KEY>/<PRODUCT>",
+    )
+    parser.add_argument(
+        "--urls",
+        action="store_true",
+        help="Indicate the inputs are a list of URLs from ASF."
     )
     parser.add_argument(
         "-o",
@@ -272,7 +293,7 @@ def _get_parser(subparsers=None):
         "-u",
         "--username",
         help="username for ASF authentication. "
-        "If not provided the tool attempts to retireve the "
+        "If not provided the tool attempts to retrieve the "
         "authentication parameters for the user's '.netrc' file looking "
         "for the host 'urs.earthdata.nasa.gov'",
     )
@@ -280,7 +301,7 @@ def _get_parser(subparsers=None):
         "-p",
         "--password",
         help="password for ASF authentication. "
-        "If not provided the tool attempts to retireve the "
+        "If not provided the tool attempts to retrieve the "
         "authentication parameters for the user's '.netrc' file looking "
         "for the host 'urs.earthdata.nasa.gov'",
     )
@@ -290,16 +311,44 @@ def _get_parser(subparsers=None):
         default=BLOCKSIZE,
         help="httpio block size in bytes (default: %(default)d)",
     )
+    # Optional filters
+    parser.add_argument(
+        "--polarization",
+        choices=["vv", "vh", "hv", "hh"],
+        type=str.lower,
+        help="Choose only one polarization to download. "
+        "If not provided both polarizations are downloaded."
+    )
+
+    # Additional file downloads
+    parser.add_argument(
+        "-c",
+        "--calibration",
+        action="store_true",
+        help="Download calibration files."
+    )
+    parser.add_argument(
+        "-n",
+        "--noise",
+        action="store_true",
+        help="Download noise calibration files."
+    )
+    parser.add_argument(
+        "-r",
+        "--rfi",
+        action="store_true",
+        help="Download RFI files."
+    )
 
     # Positional arguments
     parser.add_argument(
         "inputs",
-        nargs="+",
+        nargs="*",
         metavar="INPUT",
         help="Sentinel-1 product name(s). "
         "If the '-f' flag is set then the argument is interpreted as "
         "the filename containing the list of products. "
-        "See '--file--list' option desctiption for more details",
+        "See '--file--list' option description for more details",
     )
 
     if subparsers is None:
@@ -335,9 +384,21 @@ def main(*argv):
     try:
         _log.setLevel(args.loglevel)
 
+        auth = _get_auth(user=args.username, pwd=args.password)
+        outroot = pathlib.Path(args.outdir)
+
         rootkey = ''
         products_tree = collections.defaultdict(list)
-        if args.file_list:
+        if args.urls:
+            urls = args.inputs
+            patterns = _make_pattern_filters(
+                pol=args.polarization, do_calibration=args.calibration,
+                do_noise=args.noise, do_rfi=args.rfi
+            )
+            download_components_from_urls(urls, patterns, outdir=outroot, auth=auth)
+            # For urls passed, exit early once downloaded
+            return exit_code
+        elif args.file_list:
             for filename in args.inputs:
                 filename = pathlib.Path(filename)
                 new_product = _read_from_file(filename)
@@ -347,17 +408,20 @@ def main(*argv):
                     assert isinstance(new_product, dict)
                     products_tree.update(new_product)
         else:
-            products_tree[""].extend(args.inputs)
+            # Ignore if user passed files with .zip or .SAFE extensions
+            inputs = [p.replace(".zip", "").replace(".SAFE", "") for p in args.inputs]
+            products_tree[""].extend(inputs)
 
-        auth = _get_auth(user=args.username, pwd=args.password)
-        
-        outroot = pathlib.Path(args.outdir)
         items = pbar = tqdm.tqdm(products_tree.items())
         for folder, products in items:
             pbar.set_description(folder if folder else 'DOWNLOAD')
             outpath = outroot / folder
-            download_annotations(products, outdir=outpath, auth=auth)
-        
+            download_annotations(
+                products, outdir=outpath, auth=auth, pol=args.polarization,
+                do_calibration=args.calibration, do_noise=args.noise,
+                do_rfi=args.rfi
+            )
+
     except Exception as exc:
         _log.critical(
             "unexpected exception caught: {!r} {}".format(
