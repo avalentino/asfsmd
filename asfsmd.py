@@ -314,7 +314,7 @@ def _get_parser(subparsers=None):
     # Optional filters
     parser.add_argument(
         "--polarization",
-        choices=["vv", "vh"],
+        choices=["vv", "vh", "hv", "hh"],
         type=str.lower,
         help="Choose only one polarization to download. "
         "If not provided both polarizations are downloaded."
