@@ -43,7 +43,7 @@ __all__ = ["download_annotations", "main"]
 _log = logging.getLogger(__name__)
 
 
-BLOCKSIZE = 64 * 1024 * 1024  # 64MB
+BLOCKSIZE = 16 * 1024 * 1024  # 16MB (64MB is a better choice to download data)
 
 
 class HttpIOFile(httpio.SyncHTTPIOFile):
@@ -85,6 +85,9 @@ def make_patterns(
     Patterns are used to match components in the ZIP archive of the
     Sentinel-1 products.
     """
+    beam = "*" if beam is None else beam
+    pol = "??" if pol is None else pol
+
     patterns = [
         "S1*.SAFE/manifest.safe",
     ]
