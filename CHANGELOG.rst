@@ -1,6 +1,13 @@
 asfsmd release history
 ======================
 
+
+asfsmd v1.2.0 (UNRELEASED)
+--------------------------
+
+* TBW
+
+
 asfsmd v1.1.0 (03/12/2022)
 --------------------------
 
@@ -15,6 +22,7 @@ asfsmd v1.1.0 (03/12/2022)
 
   Moreover now it is possible to select a specific beams or polarizations.
   Patch developed by @scottstanie and @avalentino.
+* Restore compatibility with Python 3.6.
 
 
 asfsmd v1.0.0 (09/01/2022)
