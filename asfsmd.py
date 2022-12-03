@@ -115,12 +115,6 @@ def download_components_from_urls(urls, *, patterns=None, outdir=".", auth=None,
         for url in url_iter:
             url_iter.set_description(url)
             product_name = pathlib.Path(urlparse(url).path).stem
-            _log.debug("product_name = %r", product_name)
-
-            # if outdir.joinpath(product_name).with_suffix('.SAFE').exists():
-            #     _log.debug("%r already exists", product_name)
-            #    continue
-
             _log.debug("download: %r", product_name)
 
             remote_file = HttpIOFile(url, block_size=block_size)
