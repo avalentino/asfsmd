@@ -5,7 +5,10 @@ asfsmd release history
 asfsmd v1.2.0 (UNRELEASED)
 --------------------------
 
-* TBW
+* Fix issue with the management of default values for the `make_patterns`
+  function.
+* Improve the management of the download of large files (chunking and
+  progress).
 
 
 asfsmd v1.1.0 (03/12/2022)
