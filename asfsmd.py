@@ -76,26 +76,36 @@ def query(products):
     return results
 
 
-def _make_pattern_filters(pol=None, do_calibration=False, do_noise=False, do_rfi=False):
-    pol_filter = pol or ''  # empty string matches all polarizations
+def make_patterns(
+    beam="*", pol="??", cal=False, noise=False, rfi=False, data=False,
+):
+    patterns = [
+        "S1*.SAFE/manifest.safe",
+    ]
 
-    patterns = {
-        "S1*.SAFE/manifest.safe": '',
-        "S1*.SAFE/annotation/s1*.xml": pol_filter
-    }
-    if do_calibration:
-        patterns["S1*.SAFE/annotation/calibration/calibration*.xml"] = pol_filter
-    if do_noise:
-        patterns["S1*.SAFE/annotation/calibration/noise*.xml"] = pol_filter
-    if do_rfi:
-        patterns["S1*.SAFE/annotation/rfi/rfi*.xml"] = pol_filter
+    head = "S1*.SAFE/annotation"
+    tail = f"s1?-{beam}-???-{pol}-*.xml"
+
+    patterns.append(f"{head}/{tail}")
+    if cal:
+        patterns.append(f"{head}/calibration/calibration-{tail}")
+    if noise:
+        patterns.append(f"{head}/calibration/noise-{tail}")
+    if rfi:
+        patterns.append(f"{head}/rfi/rfi-{tail}")
+
+    if data:
+        patterns.append(f"S1*.SAFE/measurement/s1?-{beam}-???-{pol}-*.tiff")
+
     return patterns
 
 
-def download_components_from_urls(urls, patterns, outdir=".", auth=None,
+def download_components_from_urls(urls, *, patterns=None, outdir=".", auth=None,
                                   block_size=BLOCKSIZE):
     """Download Sentinel-1 annotation for the specified product urls."""
     outdir = pathlib.Path(outdir)
+    if patterns is None:
+        patterns = make_patterns()
 
     with requests.Session() as session:
         session.auth = auth
@@ -119,11 +129,10 @@ def download_components_from_urls(urls, patterns, outdir=".", auth=None,
                 with zipfile.ZipFile(fd) as zf:
                     components = []
                     for info in zf.filelist:
-                        for pattern, filter in patterns.items():
+                        for pattern in patterns:
                             if fnmatch.fnmatch(info.filename, pattern):
-                                if filter in info.filename:
-                                    components.append(info)
-                                    break
+                                components.append(info)
+                                break
 
                     component_iter = tqdm.tqdm(
                         components, unit="files", leave=False
@@ -145,8 +154,7 @@ def download_components_from_urls(urls, patterns, outdir=".", auth=None,
                         _log.debug("%r extracted", info.filename)
 
 
-def download_annotations(products, outdir=".", auth=None, pol=None,
-                         do_calibration=False, do_noise=False, do_rfi=False):
+def download_annotations(products, *, patterns=None, outdir=".", auth=None):
     """Download annotations for the specified Sentinel-1 products."""
     results = query(products)
     if len(results) != len(products):
@@ -157,10 +165,9 @@ def download_annotations(products, outdir=".", auth=None, pol=None,
 
     urls = [item.properties["url"] for item in results]
 
-    patterns = _make_pattern_filters(
-        pol=pol, do_calibration=do_calibration, do_noise=do_noise, do_rfi=do_rfi
+    download_components_from_urls(
+        urls, patterns=patterns, outdir=outdir, auth=auth
     )
-    download_components_from_urls(urls, patterns, outdir=outdir, auth=auth)
 
 
 def _get_auth(*, user=None, pwd=None, hostname="urs.earthdata.nasa.gov"):
@@ -311,9 +318,24 @@ def _get_parser(subparsers=None):
         default=BLOCKSIZE,
         help="httpio block size in bytes (default: %(default)d)",
     )
+
     # Optional filters
     parser.add_argument(
-        "--polarization",
+        "-b",
+        "--beam",
+        choices=[
+            "s1", "s2", "s3", "s4", "s5", "s6",
+            "iw1", "iw2", "iw3",
+            "ew1", "ew2", "ew3", "ew4", "ew5",
+            "wv1", "wv2",
+        ],
+        type=str.lower,
+        help="Choose only one beam to download. "
+        "If not provided all beams are downloaded."
+    )
+
+    parser.add_argument(
+        "--pol",
         choices=["vv", "vh", "hv", "hh"],
         type=str.lower,
         help="Choose only one polarization to download. "
@@ -323,7 +345,7 @@ def _get_parser(subparsers=None):
     # Additional file downloads
     parser.add_argument(
         "-c",
-        "--calibration",
+        "--cal",
         action="store_true",
         help="Download calibration files."
     )
@@ -339,16 +361,23 @@ def _get_parser(subparsers=None):
         action="store_true",
         help="Download RFI files."
     )
+    parser.add_argument(
+        "--data",
+        action="store_true",
+        help="Download measurement files."
+    )
 
     # Positional arguments
     parser.add_argument(
         "inputs",
-        nargs="*",
+        nargs="+",
         metavar="INPUT",
         help="Sentinel-1 product name(s). "
         "If the '-f' flag is set then the argument is interpreted as "
         "the filename containing the list of products. "
-        "See '--file--list' option description for more details",
+        "If the '--urls' flag is set then the arguments are interpreted as "
+        "URLs pointing to product on the ASF server. "
+        "See '--file--list' and the '--urls' options for more details.",
     )
 
     if subparsers is None:
@@ -386,41 +415,44 @@ def main(*argv):
 
         auth = _get_auth(user=args.username, pwd=args.password)
         outroot = pathlib.Path(args.outdir)
+        patterns = make_patterns(
+            beam=args.beam, pol=args.pol,
+            cal=args.cal, noise=args.noise, rfi=args.rfi,
+            data=args.data,
+        )
 
         rootkey = ''
         products_tree = collections.defaultdict(list)
         if args.urls:
             urls = args.inputs
-            patterns = _make_pattern_filters(
-                pol=args.polarization, do_calibration=args.calibration,
-                do_noise=args.noise, do_rfi=args.rfi
+            download_components_from_urls(
+                urls, patterns=patterns, outdir=outroot, auth=auth,
             )
-            download_components_from_urls(urls, patterns, outdir=outroot, auth=auth)
-            # For urls passed, exit early once downloaded
-            return exit_code
-        elif args.file_list:
-            for filename in args.inputs:
-                filename = pathlib.Path(filename)
-                new_product = _read_from_file(filename)
-                if isinstance(new_product, list):
-                    products_tree[rootkey].extend(new_product)
-                else:
-                    assert isinstance(new_product, dict)
-                    products_tree.update(new_product)
         else:
-            # Ignore if user passed files with .zip or .SAFE extensions
-            inputs = [p.replace(".zip", "").replace(".SAFE", "") for p in args.inputs]
-            products_tree[""].extend(inputs)
+            if args.file_list:
+                for filename in args.inputs:
+                    filename = pathlib.Path(filename)
+                    new_product = _read_from_file(filename)
+                    if isinstance(new_product, list):
+                        products_tree[rootkey].extend(new_product)
+                    else:
+                        assert isinstance(new_product, dict)
+                        products_tree.update(new_product)
+            else:
+                # Ignore if user passed files with .zip or .SAFE extensions
+                inputs = [
+                    p.replace(".zip", "").replace(".SAFE", "")
+                    for p in args.inputs
+                ]
+                products_tree[""].extend(inputs)
 
-        items = pbar = tqdm.tqdm(products_tree.items())
-        for folder, products in items:
-            pbar.set_description(folder if folder else 'DOWNLOAD')
-            outpath = outroot / folder
-            download_annotations(
-                products, outdir=outpath, auth=auth, pol=args.polarization,
-                do_calibration=args.calibration, do_noise=args.noise,
-                do_rfi=args.rfi
-            )
+            items = pbar = tqdm.tqdm(products_tree.items())
+            for folder, products in items:
+                pbar.set_description(folder if folder else 'DOWNLOAD')
+                outpath = outroot / folder
+                download_annotations(
+                    products, outdir=outpath, auth=auth, patterns=patterns,
+                )
 
     except Exception as exc:
         _log.critical(
