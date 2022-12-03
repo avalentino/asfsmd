@@ -1,7 +1,7 @@
 asfsmd release history
 ======================
 
-asfsmd v1.1.0 (UNRELEASED)
+asfsmd v1.1.0 (03/12/2022)
 --------------------------
 
 * Now it is possible to customize the selection of files to be downloaded.
