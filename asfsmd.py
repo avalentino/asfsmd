@@ -79,6 +79,11 @@ def query(products):
 def make_patterns(
     beam="*", pol="??", cal=False, noise=False, rfi=False, data=False,
 ):
+    """Generate a list of patterns according to the specified options.
+
+    Patterns are used to match components in the ZIP archive of the
+    Sentinel-1 products.
+    """
     patterns = [
         "S1*.SAFE/manifest.safe",
     ]
@@ -100,8 +105,9 @@ def make_patterns(
     return patterns
 
 
-def download_components_from_urls(urls, *, patterns=None, outdir=".", auth=None,
-                                  block_size=BLOCKSIZE):
+def download_components_from_urls(
+    urls, *, patterns=None, outdir=".", auth=None, block_size=BLOCKSIZE,
+):
     """Download Sentinel-1 annotation for the specified product urls."""
     outdir = pathlib.Path(outdir)
     if patterns is None:
