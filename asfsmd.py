@@ -43,7 +43,8 @@ __all__ = ["download_annotations", "main"]
 _log = logging.getLogger(__name__)
 
 
-BLOCKSIZE = 16 * 1024 * 1024  # 16MB (64MB is a better choice to download data)
+MB = 1024 * 1024
+BLOCKSIZE = 16 * MB  # 16MB (64MB is a better choice to download data)
 
 
 class HttpIOFile(httpio.SyncHTTPIOFile):
@@ -330,8 +331,8 @@ def _get_parser(subparsers=None):
     parser.add_argument(
         "--block-size",
         type=int,
-        default=BLOCKSIZE,
-        help="httpio block size in bytes (default: %(default)d)",
+        default=BLOCKSIZE // MB,
+        help="httpio block size in MB (default: %(default)d)",
     )
 
     # Optional filters
@@ -442,7 +443,7 @@ def main(*argv):
             urls = args.inputs
             download_components_from_urls(
                 urls, patterns=patterns, outdir=outroot, auth=auth,
-                block_size=args.block_size,
+                block_size=args.block_size * MB,
             )
         else:
             if args.file_list:
@@ -468,7 +469,7 @@ def main(*argv):
                 outpath = outroot / folder
                 download_annotations(
                     products, outdir=outpath, auth=auth, patterns=patterns,
-                    block_size=args.block_size,
+                    block_size=args.block_size * MB,
                 )
 
     except Exception as exc:
