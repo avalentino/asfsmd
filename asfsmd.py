@@ -24,6 +24,7 @@ import pathlib
 import zipfile
 import argparse
 import warnings
+import functools
 import collections
 
 from typing import Dict, List, Union
@@ -42,7 +43,7 @@ __all__ = ["download_annotations", "main"]
 _log = logging.getLogger(__name__)
 
 
-BLOCKSIZE = 1 * 1024  # 1kb
+BLOCKSIZE = 64 * 1024 * 1024  # 64MB
 
 
 class HttpIOFile(httpio.SyncHTTPIOFile):
@@ -148,13 +149,24 @@ def download_components_from_urls(
                         if outfile.exists():
                             _log.debug("outfile = %r exists", outfile)
                             continue
-                        # zf.extract(info, str(targetdir))
-                        data = zf.read(info)
-                        outfile.write_bytes(data)
+                        with zf.open(info) as src, open(outfile, "wb") as dst:
+                            with tqdm.tqdm(
+                                total=info.file_size, leave=False,
+                                unit_scale=True, unit="B",
+                            ) as pbar:
+                                stream = iter(
+                                    functools.partial(src.read, block_size),
+                                    b"",
+                                )
+                                for data in stream:
+                                    dst.write(data)
+                                    pbar.update(len(data))
                         _log.debug("%r extracted", info.filename)
 
 
-def download_annotations(products, *, patterns=None, outdir=".", auth=None):
+def download_annotations(
+    products, *, patterns=None, outdir=".", auth=None, block_size=BLOCKSIZE,
+):
     """Download annotations for the specified Sentinel-1 products."""
     results = query(products)
     if len(results) != len(products):
@@ -427,6 +439,7 @@ def main(*argv):
             urls = args.inputs
             download_components_from_urls(
                 urls, patterns=patterns, outdir=outroot, auth=auth,
+                block_size=args.block_size,
             )
         else:
             if args.file_list:
@@ -452,6 +465,7 @@ def main(*argv):
                 outpath = outroot / folder
                 download_annotations(
                     products, outdir=outpath, auth=auth, patterns=patterns,
+                    block_size=args.block_size,
                 )
 
     except Exception as exc:
