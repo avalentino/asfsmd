@@ -27,7 +27,7 @@ import warnings
 import functools
 import collections
 
-from typing import Dict, List, Union
+from typing import Dict, List, NamedTuple, Optional, Union
 from urllib.parse import urlparse
 
 import tqdm
@@ -47,26 +47,13 @@ MB = 1024 * 1024
 BLOCKSIZE = 16 * MB  # 16MB (64MB is a better choice to download data)
 
 
-class HttpIOFile(httpio.SyncHTTPIOFile):
-    def open(self, session=None):
-        self._assert_not_closed()
-        if not self._closing and self._session is None:
-            self._session = requests.Session() if session is None else session
-            response = self._session.get(self.url, stream=True, **self._kwargs)
-            with response:
-                response.raise_for_status()
-                try:
-                    self.length = int(response.headers["Content-Length"])
-                except KeyError:
-                    raise httpio.HTTPIOError(
-                        "Server does not report content length"
-                    )
-                accept_ranges = response.headers.get("Accept-Ranges", "")
-                if accept_ranges.lower() != "bytes":
-                    raise httpio.HTTPIOError(
-                        "Server does not accept 'Range' headers"
-                    )
-        return self
+class Auth(NamedTuple):
+    user: str
+    pwd: str
+
+
+PathType = Union[str, bytes, os.PathLike]
+Url = str
 
 
 def query(products):
@@ -110,8 +97,31 @@ def make_patterns(
     return patterns
 
 
+class HttpIOFile(httpio.SyncHTTPIOFile):
+    def open(self, session=None):
+        self._assert_not_closed()
+        if not self._closing and self._session is None:
+            self._session = requests.Session() if session is None else session
+            response = self._session.get(self.url, stream=True, **self._kwargs)
+            with response:
+                response.raise_for_status()
+                try:
+                    self.length = int(response.headers["Content-Length"])
+                except KeyError:
+                    raise httpio.HTTPIOError(
+                        "Server does not report content length"
+                    )
+                accept_ranges = response.headers.get("Accept-Ranges", "")
+                if accept_ranges.lower() != "bytes":
+                    raise httpio.HTTPIOError(
+                        "Server does not accept 'Range' headers"
+                    )
+        return self
+
+
 def download_components_from_urls(
-    urls, *, patterns=None, outdir=".", auth=None, block_size=BLOCKSIZE,
+    urls, *, patterns: Optional[List[str]] = None, outdir: PathType = ".",
+    auth: Auth = None, block_size: Optional[int] = BLOCKSIZE,
 ):
     """Download Sentinel-1 annotation for the specified product urls."""
     outdir = pathlib.Path(outdir)
@@ -169,7 +179,9 @@ def download_components_from_urls(
 
 
 def download_annotations(
-    products, *, patterns=None, outdir=".", auth=None, block_size=BLOCKSIZE,
+    products: List[str], *, patterns: Optional[List[str] ] = None,
+    outdir: PathType = ".", auth: Auth = None,
+    block_size: Optional[int] = BLOCKSIZE,
 ):
     """Download annotations for the specified Sentinel-1 products."""
     results = query(products)
@@ -182,17 +194,22 @@ def download_annotations(
     urls = [item.properties["url"] for item in results]
 
     download_components_from_urls(
-        urls, patterns=patterns, outdir=outdir, auth=auth
+        urls, patterns=patterns, outdir=outdir, auth=auth,
+        block_size=block_size,
     )
 
 
-def _get_auth(*, user=None, pwd=None, hostname="urs.earthdata.nasa.gov"):
+def _get_auth(
+    user: Optional[str] = None,
+    pwd: Optional[str] = None,
+    hostname: Url = "urs.earthdata.nasa.gov"
+) -> Auth:
     if user is not None and pwd is not None:
-        return user, pwd
+        return Auth(user, pwd)
     elif user is None and pwd is None:
         db = netrc.netrc()
         user, _, pwd = db.authenticators(hostname)
-        return user, pwd
+        return Auth(user, pwd)
     else:
         raise ValueError(
             "Both username and password must be provided to authenticate."
@@ -209,8 +226,6 @@ def _read_from_file(filename: os.PathLike) -> Union[List[str], Dict[str, str]]:
 
 
 # === Command Line Interface ==================================================
-
-
 try:
     from os import EX_OK
 except ImportError:
