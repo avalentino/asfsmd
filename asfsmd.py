@@ -25,14 +25,13 @@ import zipfile
 import argparse
 import warnings
 import functools
+import contextlib
 import collections
 
 from typing import Dict, List, NamedTuple, Optional, Union
 from urllib.parse import urlparse
 
 import tqdm
-import httpio
-import requests
 import asf_search as asf
 
 
@@ -97,6 +96,36 @@ def make_patterns(
     return patterns
 
 
+def _filter_components(
+    zf: zipfile.ZipFile, patterns: List[str],
+) -> List[zipfile.ZipInfo]:
+    components = []
+    for info in zf.filelist:
+        for pattern in patterns:
+            if fnmatch.fnmatch(info.filename, pattern):
+                components.append(info)
+                break
+    return components
+
+
+def _download(
+    zf: zipfile.ZipFile, info: zipfile.ZipInfo, outfile: PathType,
+    block_size: int = BLOCKSIZE,
+):
+    size = info.file_size
+    with tqdm.tqdm(total=size, leave=False, unit_scale=True, unit="B") as pbar:
+        with zf.open(info) as src, open(outfile, "wb") as dst:
+            for data in iter(functools.partial(src.read, block_size), b""):
+                dst.write(data)
+                pbar.update(len(data))
+
+
+import io
+
+import httpio
+import requests
+
+
 class HttpIOFile(httpio.SyncHTTPIOFile):
     def open(self, session=None):
         self._assert_not_closed()
@@ -119,6 +148,34 @@ class HttpIOFile(httpio.SyncHTTPIOFile):
         return self
 
 
+class HttpIOClient(contextlib.AbstractContextManager):
+    def __init__(self, auth: Auth, block_size: int = BLOCKSIZE):
+        self._session = requests.Session()
+        self._session.auth = auth
+        self._block_size = block_size
+    
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self._session.close()
+
+    def open(self, url: Url) -> io.BufferedIOBase:
+        remote_file = HttpIOFile(url, block_size=self._block_size)
+        return remote_file.open(session=self._session)
+
+
+def _get_client(auth: Auth, block_size: Optional[int] = BLOCKSIZE):
+    return HttpIOClient(auth=auth, block_size=block_size)
+
+
+@contextlib.contextmanager
+def _open_zip_archive(url: Url, client) -> zipfile.ZipFile:
+    with client.open(url) as fd:
+        with zipfile.ZipFile(fd) as zf:
+            yield zf
+
+
 def download_components_from_urls(
     urls, *, patterns: Optional[List[str]] = None, outdir: PathType = ".",
     auth: Auth = None, block_size: Optional[int] = BLOCKSIZE,
@@ -128,53 +185,31 @@ def download_components_from_urls(
     if patterns is None:
         patterns = make_patterns()
 
-    with requests.Session() as session:
-        session.auth = auth
-        _log.debug("session open")
-
+    with _get_client(auth=auth, block_size=block_size) as client:
         url_iter = tqdm.tqdm(urls, unit=" products")
         for url in url_iter:
             url_iter.set_description(url)
             product_name = pathlib.Path(urlparse(url).path).stem
             _log.debug("download: %r", product_name)
 
-            remote_file = HttpIOFile(url, block_size=block_size)
-            with remote_file.open(session=session) as fd:
+            with _open_zip_archive(url, client) as zf:
                 _log.debug("%s open", url)
-                with zipfile.ZipFile(fd) as zf:
-                    components = []
-                    for info in zf.filelist:
-                        for pattern in patterns:
-                            if fnmatch.fnmatch(info.filename, pattern):
-                                components.append(info)
-                                break
-
-                    component_iter = tqdm.tqdm(
-                        components, unit="files", leave=False
-                    )
-                    for info in component_iter:
-                        filename = pathlib.Path(info.filename)
-                        component_iter.set_description(filename.name)
-                        targetdir = outdir / filename.parent
-                        outfile = targetdir / filename.name
-                        _log.debug("targetdir = %r", targetdir)
-                        _log.debug("outfile = %r", outfile)
-                        targetdir.mkdir(exist_ok=True, parents=True)
-                        if outfile.exists():
-                            _log.debug("outfile = %r exists", outfile)
-                            continue
-                        with zf.open(info) as src, open(outfile, "wb") as dst:
-                            with tqdm.tqdm(
-                                total=info.file_size, leave=False,
-                                unit_scale=True, unit="B",
-                            ) as pbar:
-                                stream = iter(
-                                    functools.partial(src.read, block_size),
-                                    b"",
-                                )
-                                for data in stream:
-                                    dst.write(data)
-                                    pbar.update(len(data))
+                components = _filter_components(zf, patterns)
+                component_iter = tqdm.tqdm(
+                    components, unit="files", leave=False
+                )
+                for info in component_iter:
+                    filename = pathlib.Path(info.filename)
+                    component_iter.set_description(filename.name)
+                    targetdir = outdir / filename.parent
+                    outfile = targetdir / filename.name
+                    _log.debug("targetdir = %r", targetdir)
+                    _log.debug("outfile = %r", outfile)
+                    targetdir.mkdir(exist_ok=True, parents=True)
+                    if outfile.exists():
+                        _log.debug("outfile = %r exists", outfile)
+                    else:
+                        _download(zf, info, outfile, block_size=block_size)
                         _log.debug("%r extracted", info.filename)
 
 
