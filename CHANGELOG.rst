@@ -2,7 +2,7 @@ asfsmd release history
 ======================
 
 
-asfsmd v1.2.0 (UNRELEASED)
+asfsmd v1.2.0 (04/12/2022)
 --------------------------
 
 * Refactoring to convert the `asfsmd.py`` module into a package.
