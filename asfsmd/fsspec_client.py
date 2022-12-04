@@ -1,3 +1,5 @@
+"""Asfsmd client based on fsspec."""
+
 import zipfile
 import contextlib
 from typing import Optional

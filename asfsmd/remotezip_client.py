@@ -1,3 +1,5 @@
+"""Asfsmd client based on remotezip."""
+
 import zipfile
 
 import requests
