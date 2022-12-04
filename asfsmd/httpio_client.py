@@ -3,13 +3,11 @@
 import io
 import zipfile
 import contextlib
-from typing import Optional
 
 import httpio
 import requests
 
-
-from .common import Auth, BLOCKSIZE, Url
+from .common import AbstractClient, Auth, BLOCKSIZE, Url
 
 
 class HttpIOFile(httpio.SyncHTTPIOFile):
@@ -34,29 +32,30 @@ class HttpIOFile(httpio.SyncHTTPIOFile):
         return self
 
 
-class HttpIOClient(contextlib.AbstractContextManager):
+class HttpIOClient(AbstractClient):
     def __init__(self, auth: Auth, block_size: int = BLOCKSIZE):
         self._session = requests.Session()
         self._session.auth = auth
         self._block_size = block_size
-    
+
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         self._session.close()
 
-    def open(self, url: Url) -> io.BufferedIOBase:
+    def open(self, url: Url, mode: str = "rb") -> io.BufferedIOBase:
+        if mode != "rb":
+            raise ValueError("invalid mode: {mode!r}")
+
         remote_file = HttpIOFile(url, block_size=self._block_size)
         return remote_file.open(session=self._session)
 
+    @contextlib.contextmanager
+    def open_zip_archive(self, url: Url) -> zipfile.ZipFile:
+        with self.open(url) as fd:
+            with zipfile.ZipFile(fd) as zf:
+                yield zf
 
-@contextlib.contextmanager
-def open_zip_archive(url: Url, client) -> zipfile.ZipFile:
-    with client.open(url) as fd:
-        with zipfile.ZipFile(fd) as zf:
-            yield zf
 
-
-def get_client(auth: Auth, block_size: Optional[int] = BLOCKSIZE):
-    return HttpIOClient(auth=auth, block_size=block_size)
+Client = HttpIOClient

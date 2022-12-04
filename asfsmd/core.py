@@ -1,5 +1,6 @@
 """Core functiond for the ASF Sentinel-1 Metadata Download tool."""
 
+import os
 import netrc
 import fnmatch
 import logging
@@ -28,26 +29,32 @@ __all__ = [
 _log = logging.getLogger(__name__)
 
 
-_implementation = None
-
-
-def _get_implementation():
-    implementations = ["httpio"]
-    for name in implementations:
+def _get_client_type():
+    implementations = ["httpio", "fsspec", "remotezip"]
+    if os.environ.get("ASFSMD_CLIENT") in implementations:
+        name = os.environ.get("ASFSMD_CLIENT")
         name = f".{name}_client"
-        try:
-            return importlib.import_module(name, package=__package__)
-        except ImportError:
-            pass
+        mod = importlib.import_module(name, package=__package__)
     else:
-        raise ImportError(
-            f"Unable to import any of the asfsmd client implementations. "
-            f"At least one of the following modules is required: "
-            f"{','.join(map(repr, implementations))}"
-        )
+        for name in implementations:
+            name = f".{name}_client"
+            try:
+                mod = importlib.import_module(name, package=__package__)
+                break
+            except ImportError:
+                pass
+        else:
+            raise ImportError(
+                f"Unable to import any of the asfsmd client implementations. "
+                f"At least one of the following modules is required: "
+                f"{','.join(map(repr, implementations))}"
+            )
+
+    _log.debug(f"Client: {mod.Client}")
+    return mod.Client
 
 
-_implementation = _get_implementation()
+_ClientType = _get_client_type()
 
 
 def query(products):
@@ -124,14 +131,14 @@ def download_components_from_urls(
     if patterns is None:
         patterns = make_patterns()
 
-    with _implementation.get_client(auth=auth, block_size=block_size) as client:
+    with _ClientType(auth=auth, block_size=block_size) as client:
         url_iter = tqdm.tqdm(urls, unit=" products")
         for url in url_iter:
             url_iter.set_description(url)
             product_name = pathlib.Path(urlparse(url).path).stem
             _log.debug("download: %r", product_name)
 
-            with _implementation.open_zip_archive(url, client) as zf:
+            with client.open_zip_archive(url) as zf:
                 _log.debug("%s open", url)
                 components = _filter_components(zf, patterns)
                 component_iter = tqdm.tqdm(
@@ -153,7 +160,7 @@ def download_components_from_urls(
 
 
 def download_annotations(
-    products: List[str], *, patterns: Optional[List[str] ] = None,
+    products: List[str], *, patterns: Optional[List[str]] = None,
     outdir: PathType = ".", auth: Auth = None,
     block_size: Optional[int] = BLOCKSIZE,
 ):

@@ -1,6 +1,7 @@
 """Common constants and types."""
 
 import os
+import abc
 from typing import NamedTuple, Union
 
 
@@ -15,3 +16,9 @@ Url = str
 class Auth(NamedTuple):
     user: str
     pwd: str
+
+
+class AbstractClient(abc.ABC):
+    @abc.abstractmethod
+    def open_zip_archive(self, url: Url):
+        pass
