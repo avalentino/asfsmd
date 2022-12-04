@@ -5,6 +5,8 @@ asfsmd release history
 asfsmd v1.2.0 (UNRELEASED)
 --------------------------
 
+* Refactoring to convert the `asfsmd.py`` module into a package and to
+  support multiple backends for remote file access.
 * Fix issue with the management of default values for the `make_patterns`
   function.
 * Improve the management of the download of large files (chunking and

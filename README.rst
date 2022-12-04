@@ -30,7 +30,7 @@ Command Line Interface
 
 ::
 
-    $ python3 asfsmd.py --help
+    $ python3 -m asfsmd --help
 
     usage: asfsmd [-h] [--version]
                   [--loglevel {DEBUG,INFO,WARNING,ERROR,CRITICAL}]
