@@ -13,9 +13,9 @@ binary image data.
 The `asfsmd` tool is able to retrieve only the relatively samll annotation
 files (in XML format) without downloading the entire ZIP archive.
 
-`asfsmd` exploits the `httpio` Python package for reading HTTP resources
-as random-access file-like objects. In order to do it the remote server
-must support the `Range` header.
+`asfsmd` exploits Python packages like `fsspec` or `httpio` for reading HTTP
+resources as random-access file-like objects. In order to do it the remote
+server must support the `Range` header.
 
 This approach allows to open the ZIP archive remotely, inspects contents, and
 download only the pieces of data that are actually necessary to the user.
