@@ -1,8 +1,6 @@
 ASF Sentinel-1 Metadata Download tool
 =====================================
 
-:copyright: 2021-2022 Antonio Valentino
-
 Small Python tool (`asfsmd`) that allows to download XML files containing
 Sentinel-1 products metadata from the ASF archive.
 
@@ -104,5 +102,7 @@ Command Line Interface
 
 License
 -------
+
+Copyright (c) 2021-2022 Antonio Valentino
 
 The `asfsmd` package is distributed under the MIT License.
