@@ -16,4 +16,4 @@ from .core import (                                             # noqa: F401
     download_annotations, download_components_from_urls, make_patterns,
 )
 
-__version__ = "1.3.0.dev0"
+__version__ = "1.3.0"

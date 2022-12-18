@@ -2,7 +2,7 @@ asfsmd release history
 ======================
 
 
-asfsmd v1.3.0 (UNRELEASED)
+asfsmd v1.3.0 (18/12/2022)
 --------------------------
 
 * New client based on smart_open_.
