@@ -5,20 +5,27 @@ asfsmd release history
 asfsmd v1.3.0 (UNRELEASED)
 --------------------------
 
-* TBW
+* New client based on smart_open_.
+
+.. _smart_open: https://github.com/RaRe-Technologies/smart_open
 
 
 asfsmd v1.2.0 (04/12/2022)
 --------------------------
 
-* Refactoring to convert the `asfsmd.py`` module into a package.
-* Support multiple backends for remote file access: httpio, fsspec, remotezip.
+* Refactoring to convert the `asfsmd.py` module into a package.
+* Support multiple backends for remote file access: httpio_, fsspec_ and
+  remotezip_.
   The httpio based implementation seems to be slightly faster w.r.t. the
   other ones.
 * Fix issue with the management of default values for the `make_patterns`
   function.
 * Improve the management of the download of large files (chunking and
   progress).
+
+.. _httpio: https://github.com/barneygale/httpio
+.. _fsspec: https://github.com/fsspec/filesystem_spec
+.. _remotezip: https://github.com/gtsystem/python-remotezip
 
 
 asfsmd v1.1.0 (03/12/2022)
