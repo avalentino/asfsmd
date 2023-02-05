@@ -2,11 +2,11 @@ asfsmd release history
 ======================
 
 
-
 asfsmd v1.4.0 (UNRELEASED)
 --------------------------
 
-* TBW
+* Support for non SLC products (including RAW).
+* Move setup configuration to `pyproject.toml`.
 
 
 asfsmd v1.3.0 (18/12/2022)

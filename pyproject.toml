@@ -1,3 +1,83 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=61.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "asfsmd"
+authors = [
+    {name = "Antonio Valentino", email = "antonio.valentino@tiscali.it"},
+]
+description = "ASF Sentinel-1 Metadata Download tool"
+readme = {file = "README.rst", content-type = "text/x-rst"}
+requires-python = ">=3.7"
+keywords = ["satellite", "download"]
+license = {text = "MIT License"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "fsspec",
+    "asf-search",
+    "tqdm",
+]
+dynamic = ["version"]
+
+
+[project.optional-dependencies]
+test = ["pytest", "bitarray>=1.5.1", "bitstruct", "numpy"]
+bs = ["bitstruct"]
+ba = ["bitarray>=1.5.1"]
+np = ["numpy"]
+docs = ["sphinx", "sphinx_rtd_theme"]
+cli = ["argcomplete"]
+httpio = ["httpio", "requests"]
+remotezip = ["remotezip"]
+smartopen = ["smart_open"]
+all = [
+    "asfsmd[cli]",
+    "asfsmd[httpio]",
+    "asfsmd[remotezip]",
+    "asfsmd[smartopen]",
+]
+
+
+[project.urls]
+homepage = "https://github.com/avalentino/asfsmd"
+documentation = "https://github.com/avalentino/asfsmd/blob/main/README.rst"
+repository = "https://github.com/avalentino/asfsmd.git"
+changelog = "https://github.com/avalentino/asfsmd/blob/main/CHANGELOG.rst"
+
+
+[project.scripts]
+asfsmd = "asfsmd.cli:main"
+
+
+[tool.setuptools]
+packages = ["asfsmd"]
+zip-safe = true
+# license-files = ["LICENSE"]
+
+
+[tool.setuptools.dynamic]
+version = {attr = "asfsmd.__version__"}
+
+
+[tool.black]
+line-length = 79
+# target-version = ['py311']
+
+
+[tool.isort]
+profile = "black"
+length_sort = true
+no_inline_sort = true
+include_trailing_comma = true
+use_parentheses = true
+line_length = 79
