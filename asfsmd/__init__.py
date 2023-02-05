@@ -17,4 +17,4 @@ from .core import (  # noqa: F401
     make_patterns,
 )
 
-__version__ = "1.4.0.dev0"
+__version__ = "1.4.0"
