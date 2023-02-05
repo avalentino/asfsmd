@@ -13,7 +13,7 @@ from typing import Dict, List, Union
 
 import tqdm
 
-from . import __version__, __doc__ as DOC
+from . import __version__, __doc__ as _pkg_doc
 from .core import (
     download_annotations, download_components_from_urls, make_patterns,
     _get_auth,
@@ -90,7 +90,7 @@ def _get_parser(subparsers=None):
     """Instantiate the command line argument (sub-)parser."""
     name = __package__
     synopsis = __doc__.splitlines()[0]
-    doc = DOC
+    doc = _pkg_doc
 
     if subparsers is None:
         parser = argparse.ArgumentParser(prog=name, description=doc)
@@ -290,7 +290,7 @@ def main(*argv):
                     block_size=args.block_size * MB,
                 )
 
-    except Exception as exc:
+    except Exception as exc:  # noqa: B902
         _log.critical(
             "unexpected exception caught: {!r} {}".format(
                 type(exc).__name__, exc

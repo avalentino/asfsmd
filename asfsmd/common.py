@@ -14,11 +14,22 @@ Url = str
 
 
 class Auth(NamedTuple):
+    """Authentication parameters."""
+
     user: str
     pwd: str
 
 
 class AbstractClient(abc.ABC):
+    """Base asfsmd client class."""
+
+    def __enter__(self):  # noqa: D105
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):  # noqa: D105
+        pass
+
     @abc.abstractmethod
     def open_zip_archive(self, url: Url):
+        """Context manager for the remote zip archive."""
         pass

@@ -1,3 +1,5 @@
+"""Main ently point for the asfsmd CLI."""
+
 # PYTHON_ARGCOMPLETE_OK
 
 import sys

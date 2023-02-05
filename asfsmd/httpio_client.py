@@ -11,7 +11,10 @@ from .common import AbstractClient, Auth, BLOCKSIZE, Url
 
 
 class HttpIOFile(httpio.SyncHTTPIOFile):
-    def open(self, session=None):
+    """Class to represent an file-like object accessed via HTTP."""
+
+    def open(self, session=None):  # noqa: A003
+        """Open the remote file."""
         self._assert_not_closed()
         if not self._closing and self._session is None:
             self._session = requests.Session() if session is None else session
@@ -33,18 +36,22 @@ class HttpIOFile(httpio.SyncHTTPIOFile):
 
 
 class HttpIOClient(AbstractClient):
+    """HttpIO based asfsmd client."""
+
     def __init__(self, auth: Auth, block_size: int = BLOCKSIZE):
+        """Initialize the httpio based client."""
         self._session = requests.Session()
         self._session.auth = auth
         self._block_size = block_size
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type, exc_value, traceback):  # noqa: D105
         self._session.close()
 
-    def open(self, url: Url, mode: str = "rb") -> io.BufferedIOBase:
+    def open(  # noqa: A003
+        self, url: Url,
+        mode: str = "rb",
+    ) -> io.BufferedIOBase:
+        """Open a remote file."""
         if mode != "rb":
             raise ValueError("invalid mode: {mode!r}")
 
@@ -53,6 +60,7 @@ class HttpIOClient(AbstractClient):
 
     @contextlib.contextmanager
     def open_zip_archive(self, url: Url) -> zipfile.ZipFile:
+        """Context manager for the remote zip archive."""
         with self.open(url) as fd:
             with zipfile.ZipFile(fd) as zf:
                 yield zf

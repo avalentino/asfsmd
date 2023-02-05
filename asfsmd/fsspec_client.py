@@ -11,7 +11,10 @@ from .common import AbstractClient, Auth, Url
 
 
 class FsspacClient(AbstractClient):
+    """Fsspec based asfsmd client."""
+
     def __init__(self, auth: Auth, block_size: Optional[int] = None):
+        """Initialize the fsspec based client."""
         client_kwargs = None
         if auth is not None:
             user, pwd = auth
@@ -22,14 +25,9 @@ class FsspacClient(AbstractClient):
             "http", block_size=block_size, client_kwargs=client_kwargs,
         )
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        pass
-
     @contextlib.contextmanager
     def open_zip_archive(self, url: Url) -> zipfile.ZipFile:
+        """Context manager for the remote zip archive."""
         with self._fs.open(url, "rb") as fd:
             with zipfile.ZipFile(fd) as zf:
                 yield zf
