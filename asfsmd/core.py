@@ -61,8 +61,11 @@ def query(products):
     """Query the specified Sentinel-1 products."""
     if isinstance(products, str):
         products = [products]
-    products = [product + "-SLC" for product in products]
-    results = asf.product_search(products)
+    results = asf.granule_search(products)
+    results = [
+        result for result in results
+        if "METADATA" not in result.properties["processingLevel"]
+    ]
     return results
 
 
@@ -94,6 +97,7 @@ def make_patterns(
 
     if data:
         patterns.append(f"S1*.SAFE/measurement/s1?-{beam}-???-{pol}-*.tiff")
+        patterns.append(f"S1*.SAFE/s1?-{beam}-???-?-{pol}-*.dat")
 
     return patterns
 
