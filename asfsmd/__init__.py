@@ -1,4 +1,3 @@
-
 """ASF Sentinel-1 Metadata Download tool.
 
 Small Python tool (`asfsmd`) that allows to download XML files containing
@@ -12,8 +11,10 @@ The `asfsmd` tool is able to retrieve only the relatively small annotation
 files (in XML format) without downloading the entire ZIP archive.
 """
 
-from .core import (                                             # noqa: F401
-    download_annotations, download_components_from_urls, make_patterns,
+from .core import (  # noqa: F401
+    download_annotations,
+    download_components_from_urls,
+    make_patterns,
 )
 
 __version__ = "1.4.0.dev0"

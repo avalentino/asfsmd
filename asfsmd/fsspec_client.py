@@ -22,7 +22,9 @@ class FsspacClient(AbstractClient):
             client_kwargs = {"auth": auth}
 
         self._fs = fsspec.filesystem(
-            "http", block_size=block_size, client_kwargs=client_kwargs,
+            "http",
+            block_size=block_size,
+            client_kwargs=client_kwargs,
         )
 
     @contextlib.contextmanager

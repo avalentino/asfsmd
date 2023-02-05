@@ -48,7 +48,8 @@ class HttpIOClient(AbstractClient):
         self._session.close()
 
     def open(  # noqa: A003
-        self, url: Url,
+        self,
+        url: Url,
         mode: str = "rb",
     ) -> io.BufferedIOBase:
         """Open a remote file."""

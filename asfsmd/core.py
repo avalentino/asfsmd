@@ -9,7 +9,6 @@ import zipfile
 import warnings
 import functools
 import importlib
-
 from typing import List, Optional
 from urllib.parse import urlparse
 
@@ -17,7 +16,6 @@ import tqdm
 import asf_search as asf
 
 from .common import Auth, BLOCKSIZE, PathType, Url
-
 
 __all__ = [
     "download_annotations",
@@ -63,14 +61,20 @@ def query(products):
         products = [products]
     results = asf.granule_search(products)
     results = [
-        result for result in results
+        result
+        for result in results
         if "METADATA" not in result.properties["processingLevel"]
     ]
     return results
 
 
 def make_patterns(
-    beam="*", pol="??", cal=False, noise=False, rfi=False, data=False,
+    beam="*",
+    pol="??",
+    cal=False,
+    noise=False,
+    rfi=False,
+    data=False,
 ):
     """Generate a list of patterns according to the specified options.
 
@@ -103,7 +107,8 @@ def make_patterns(
 
 
 def _filter_components(
-    zf: zipfile.ZipFile, patterns: List[str],
+    zf: zipfile.ZipFile,
+    patterns: List[str],
 ) -> List[zipfile.ZipInfo]:
     components = []
     for info in zf.filelist:
@@ -115,7 +120,9 @@ def _filter_components(
 
 
 def _download(
-    zf: zipfile.ZipFile, info: zipfile.ZipInfo, outfile: PathType,
+    zf: zipfile.ZipFile,
+    info: zipfile.ZipInfo,
+    outfile: PathType,
     block_size: int = BLOCKSIZE,
 ):
     size = info.file_size
@@ -127,8 +134,12 @@ def _download(
 
 
 def download_components_from_urls(
-    urls, *, patterns: Optional[List[str]] = None, outdir: PathType = ".",
-    auth: Auth = None, block_size: Optional[int] = BLOCKSIZE,
+    urls,
+    *,
+    patterns: Optional[List[str]] = None,
+    outdir: PathType = ".",
+    auth: Auth = None,
+    block_size: Optional[int] = BLOCKSIZE,
 ):
     """Download Sentinel-1 annotation for the specified product urls."""
     outdir = pathlib.Path(outdir)
@@ -164,8 +175,11 @@ def download_components_from_urls(
 
 
 def download_annotations(
-    products: List[str], *, patterns: Optional[List[str]] = None,
-    outdir: PathType = ".", auth: Auth = None,
+    products: List[str],
+    *,
+    patterns: Optional[List[str]] = None,
+    outdir: PathType = ".",
+    auth: Auth = None,
     block_size: Optional[int] = BLOCKSIZE,
 ):
     """Download annotations for the specified Sentinel-1 products."""
@@ -179,7 +193,10 @@ def download_annotations(
     urls = [item.properties["url"] for item in results]
 
     download_components_from_urls(
-        urls, patterns=patterns, outdir=outdir, auth=auth,
+        urls,
+        patterns=patterns,
+        outdir=outdir,
+        auth=auth,
         block_size=block_size,
     )
 
@@ -187,7 +204,7 @@ def download_annotations(
 def _get_auth(
     user: Optional[str] = None,
     pwd: Optional[str] = None,
-    hostname: Url = "urs.earthdata.nasa.gov"
+    hostname: Url = "urs.earthdata.nasa.gov",
 ) -> Auth:
     if user is not None and pwd is not None:
         return Auth(user, pwd)

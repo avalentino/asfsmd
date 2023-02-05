@@ -8,14 +8,16 @@ import logging
 import pathlib
 import argparse
 import collections
-
 from typing import Dict, List, Union
 
 import tqdm
 
-from . import __version__, __doc__ as _pkg_doc
+from . import __version__
+from . import __doc__ as _pkg_doc
 from .core import (
-    download_annotations, download_components_from_urls, make_patterns,
+    download_annotations,
+    download_components_from_urls,
+    make_patterns,
     _get_auth,
 )
 from .common import BLOCKSIZE, MB
@@ -32,7 +34,7 @@ LOGFMT = "%(asctime)s %(levelname)-8s -- %(message)s"
 
 def _read_from_file(filename: os.PathLike) -> Union[List[str], Dict[str, str]]:
     filename = pathlib.Path(filename)
-    if filename.suffix == '.json':
+    if filename.suffix == ".json":
         return json.loads(filename.read_text())
     else:
         return [line for line in filename.read_text().splitlines() if line]
@@ -120,7 +122,7 @@ def _get_parser(subparsers=None):
     parser.add_argument(
         "--urls",
         action="store_true",
-        help="Indicate the inputs are a list of URLs from ASF."
+        help="Indicate the inputs are a list of URLs from ASF.",
     )
     parser.add_argument(
         "-o",
@@ -157,14 +159,26 @@ def _get_parser(subparsers=None):
         "-b",
         "--beam",
         choices=[
-            "s1", "s2", "s3", "s4", "s5", "s6",
-            "iw1", "iw2", "iw3",
-            "ew1", "ew2", "ew3", "ew4", "ew5",
-            "wv1", "wv2",
+            "s1",
+            "s2",
+            "s3",
+            "s4",
+            "s5",
+            "s6",
+            "iw1",
+            "iw2",
+            "iw3",
+            "ew1",
+            "ew2",
+            "ew3",
+            "ew4",
+            "ew5",
+            "wv1",
+            "wv2",
         ],
         type=str.lower,
         help="Choose only one beam to download. "
-        "If not provided all beams are downloaded."
+        "If not provided all beams are downloaded.",
     )
 
     parser.add_argument(
@@ -172,32 +186,24 @@ def _get_parser(subparsers=None):
         choices=["vv", "vh", "hv", "hh"],
         type=str.lower,
         help="Choose only one polarization to download. "
-        "If not provided both polarizations are downloaded."
+        "If not provided both polarizations are downloaded.",
     )
 
     # Additional file downloads
     parser.add_argument(
-        "-c",
-        "--cal",
-        action="store_true",
-        help="Download calibration files."
+        "-c", "--cal", action="store_true", help="Download calibration files."
     )
     parser.add_argument(
         "-n",
         "--noise",
         action="store_true",
-        help="Download noise calibration files."
+        help="Download noise calibration files.",
     )
     parser.add_argument(
-        "-r",
-        "--rfi",
-        action="store_true",
-        help="Download RFI files."
+        "-r", "--rfi", action="store_true", help="Download RFI files."
     )
     parser.add_argument(
-        "--data",
-        action="store_true",
-        help="Download measurement files."
+        "--data", action="store_true", help="Download measurement files."
     )
 
     # Positional arguments
@@ -250,17 +256,23 @@ def main(*argv):
         auth = _get_auth(user=args.username, pwd=args.password)
         outroot = pathlib.Path(args.outdir)
         patterns = make_patterns(
-            beam=args.beam, pol=args.pol,
-            cal=args.cal, noise=args.noise, rfi=args.rfi,
+            beam=args.beam,
+            pol=args.pol,
+            cal=args.cal,
+            noise=args.noise,
+            rfi=args.rfi,
             data=args.data,
         )
 
-        rootkey = ''
+        rootkey = ""
         products_tree = collections.defaultdict(list)
         if args.urls:
             urls = args.inputs
             download_components_from_urls(
-                urls, patterns=patterns, outdir=outroot, auth=auth,
+                urls,
+                patterns=patterns,
+                outdir=outroot,
+                auth=auth,
                 block_size=args.block_size * MB,
             )
         else:
@@ -283,10 +295,13 @@ def main(*argv):
 
             items = pbar = tqdm.tqdm(products_tree.items())
             for folder, products in items:
-                pbar.set_description(folder if folder else 'DOWNLOAD')
+                pbar.set_description(folder if folder else "DOWNLOAD")
                 outpath = outroot / folder
                 download_annotations(
-                    products, outdir=outpath, auth=auth, patterns=patterns,
+                    products,
+                    outdir=outpath,
+                    auth=auth,
+                    patterns=patterns,
                     block_size=args.block_size * MB,
                 )
 
