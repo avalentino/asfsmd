@@ -216,7 +216,7 @@ def _get_parser(subparsers=None):
         "the filename containing the list of products. "
         "If the '--urls' flag is set then the arguments are interpreted as "
         "URLs pointing to product on the ASF server. "
-        "See '--file--list' and the '--urls' options for more details.",
+        "See '--file-list' and the '--urls' options for more details.",
     )
 
     if subparsers is None:
