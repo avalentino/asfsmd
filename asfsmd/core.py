@@ -124,9 +124,12 @@ def _download(
     info: zipfile.ZipInfo,
     outfile: PathType,
     block_size: int = BLOCKSIZE,
+    noprogress: bool = False,
 ):
     size = info.file_size
-    with tqdm.tqdm(total=size, leave=False, unit_scale=True, unit="B") as pbar:
+    with tqdm.tqdm(
+        total=size, leave=False, unit_scale=True, unit="B", disable=noprogress
+    ) as pbar:
         with zf.open(info) as src, open(outfile, "wb") as dst:
             for data in iter(functools.partial(src.read, block_size), b""):
                 dst.write(data)
@@ -140,6 +143,7 @@ def download_components_from_urls(
     outdir: PathType = ".",
     auth: Auth = None,
     block_size: Optional[int] = BLOCKSIZE,
+    noprogress: bool = False,
 ):
     """Download Sentinel-1 annotation for the specified product urls."""
     outdir = pathlib.Path(outdir)
@@ -147,7 +151,7 @@ def download_components_from_urls(
         patterns = make_patterns()
 
     with _ClientType(auth=auth, block_size=block_size) as client:
-        url_iter = tqdm.tqdm(urls, unit=" products")
+        url_iter = tqdm.tqdm(urls, unit=" products", disable=noprogress)
         for url in url_iter:
             url_iter.set_description(url)
             product_name = pathlib.Path(urlparse(url).path).stem
@@ -157,7 +161,7 @@ def download_components_from_urls(
                 _log.debug("%s open", url)
                 components = _filter_components(zf, patterns)
                 component_iter = tqdm.tqdm(
-                    components, unit="files", leave=False
+                    components, unit="files", leave=False, disable=noprogress
                 )
                 for info in component_iter:
                     filename = pathlib.Path(info.filename)
@@ -170,7 +174,13 @@ def download_components_from_urls(
                     if outfile.exists():
                         _log.debug("outfile = %r exists", outfile)
                     else:
-                        _download(zf, info, outfile, block_size=block_size)
+                        _download(
+                            zf,
+                            info,
+                            outfile,
+                            block_size=block_size,
+                            noprogress=noprogress,
+                        )
                         _log.debug("%r extracted", info.filename)
 
 
@@ -181,6 +191,7 @@ def download_annotations(
     outdir: PathType = ".",
     auth: Auth = None,
     block_size: Optional[int] = BLOCKSIZE,
+    noprogress: bool = False,
 ):
     """Download annotations for the specified Sentinel-1 products."""
     results = query(products)
@@ -198,6 +209,7 @@ def download_annotations(
         outdir=outdir,
         auth=auth,
         block_size=block_size,
+        noprogress=noprogress,
     )
 
 

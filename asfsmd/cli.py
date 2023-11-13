@@ -252,6 +252,8 @@ def main(*argv):
     exit_code = EX_OK
     try:
         _log.setLevel(args.loglevel)
+        loglevel = logging.getLevelNamesMapping()[args.loglevel]
+        noprogress = bool(loglevel >= logging.ERROR)
 
         auth = _get_auth(user=args.username, pwd=args.password)
         outroot = pathlib.Path(args.outdir)
@@ -274,6 +276,7 @@ def main(*argv):
                 outdir=outroot,
                 auth=auth,
                 block_size=args.block_size * MB,
+                noprogress=noprogress,
             )
         else:
             if args.file_list:
@@ -293,7 +296,7 @@ def main(*argv):
                 ]
                 products_tree[""].extend(inputs)
 
-            items = pbar = tqdm.tqdm(products_tree.items())
+            items = pbar = tqdm.tqdm(products_tree.items(), disable=noprogress)
             for folder, products in items:
                 pbar.set_description(folder if folder else "DOWNLOAD")
                 outpath = outroot / folder
@@ -303,6 +306,7 @@ def main(*argv):
                     auth=auth,
                     patterns=patterns,
                     block_size=args.block_size * MB,
+                    noprogress=noprogress,
                 )
 
     except Exception as exc:  # noqa: B902
