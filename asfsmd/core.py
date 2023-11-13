@@ -3,6 +3,7 @@
 import os
 import netrc
 import fnmatch
+import hashlib
 import logging
 import pathlib
 import zipfile
@@ -11,6 +12,7 @@ import functools
 import importlib
 from typing import List, Optional
 from urllib.parse import urlparse
+from xml.etree import ElementTree as etree
 
 import tqdm
 import asf_search as asf
@@ -106,6 +108,51 @@ def make_patterns(
     return patterns
 
 
+def _is_product_complete(
+    path: pathlib.Path,
+    patterns: Optional[List[str]] = None,
+    block_size: Optional[int] = BLOCKSIZE,
+) -> bool:
+    if not path.is_dir():
+        return False
+
+    manifest_path = path / "manifest.safe"
+    if not manifest_path.is_file():
+        return False
+
+    xmldoc = etree.parse(os.fspath(manifest_path))
+    for elem in xmldoc.iterfind("./dataObjectSection/dataObject/byteStream"):
+        relative_component_path = elem.find("fileLocation").attrib["href"]
+        relative_component_path = pathlib.Path(relative_component_path)
+        relative_component_path = relative_component_path.relative_to(".")
+
+        if patterns:
+            component_path = path.name / relative_component_path
+            for pattern in patterns:
+                if component_path.match(pattern):
+                    break
+            else:
+                continue
+
+        component_path = path / relative_component_path
+        if not component_path.is_file():
+            return False
+
+        checksum_elem = elem.find("checksum")
+        checksum_type = checksum_elem.attrib["checksumName"]
+        if checksum_type.upper() != "MD5":
+            _log.warning("unexpected checksum type: %s", checksum_type)
+            return False  # cannot check if the file is complete
+        md5 = hashlib.md5()
+        with path.joinpath(relative_component_path).open("rb") as fd:
+            for data in iter(functools.partial(fd.read, block_size), b""):
+                md5.update(data)
+        if md5.hexdigest() != checksum_elem.text:
+            return False
+
+    return True
+
+
 def _filter_components(
     zf: zipfile.ZipFile,
     patterns: List[str],
@@ -154,8 +201,14 @@ def download_components_from_urls(
         url_iter = tqdm.tqdm(urls, unit=" products", disable=noprogress)
         for url in url_iter:
             url_iter.set_description(url)
-            product_name = pathlib.Path(urlparse(url).path).stem
-            _log.debug("download: %r", product_name)
+            product_out_path = outdir / pathlib.Path(urlparse(url).path).name
+            product_out_path = product_out_path.with_suffix(".SAFE")
+            product_name = product_out_path.stem
+            if _is_product_complete(product_out_path, patterns, block_size):
+                _log.debug("product already on disk: %r", product_name)
+                continue
+            else:
+                _log.debug("download: %r", product_name)
 
             with client.open_zip_archive(url) as zf:
                 _log.debug("%s open", url)
