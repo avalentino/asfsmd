@@ -11,8 +11,8 @@ import warnings
 import functools
 import importlib
 from typing import List, Optional
-from urllib.parse import urlparse
 from xml.etree import ElementTree as etree
+from urllib.parse import urlparse
 
 import tqdm
 import asf_search as asf
@@ -126,16 +126,25 @@ def _is_product_complete(
         relative_component_path = pathlib.Path(relative_component_path)
         relative_component_path = relative_component_path.relative_to(".")
 
-        if patterns:
-            component_path = path.name / relative_component_path
-            for pattern in patterns:
-                if component_path.match(pattern):
-                    break
-            else:
-                continue
+        if not patterns:
+            patterns = make_patterns()
+
+        component_path = path.name / relative_component_path
+        for pattern in patterns:
+            if component_path.match(pattern):
+                # pattern matches: exit the current loop and continue
+                # in the current main iteration
+                break
+        else:
+            # skip the rest and go to the next main iteration
+            continue
 
         component_path = path / relative_component_path
         if not component_path.is_file():
+            return False
+
+        size = int(elem.attrib["size"])
+        if component_path.stat().st_size != size:
             return False
 
         checksum_elem = elem.find("checksum")
