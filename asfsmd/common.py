@@ -8,7 +8,7 @@ MB = 1024 * 1024
 BLOCKSIZE = 16 * MB  # 16MB (64MB is a better choice to download data)
 
 
-PathType = Union[str, bytes, os.PathLike]
+PathType = Union[str, os.PathLike[str]]
 Url = str
 
 

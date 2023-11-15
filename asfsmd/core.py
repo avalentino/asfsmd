@@ -11,7 +11,7 @@ import warnings
 import functools
 import importlib
 from typing import List, Optional
-from xml.etree import ElementTree as etree
+from xml.etree import ElementTree as etree  # noqa: N813
 from urllib.parse import urlparse
 
 import tqdm
@@ -126,8 +126,7 @@ def _is_product_complete(
         relative_component_path = pathlib.Path(relative_component_path)
         relative_component_path = relative_component_path.relative_to(".")
 
-        if not patterns:
-            patterns = make_patterns()
+        patterns = make_patterns() if not patterns else patterns
 
         component_path = path.name / relative_component_path
         for pattern in patterns:
@@ -197,8 +196,8 @@ def download_components_from_urls(
     *,
     patterns: Optional[List[str]] = None,
     outdir: PathType = ".",
-    auth: Auth = None,
-    block_size: Optional[int] = BLOCKSIZE,
+    auth: Optional[Auth] = None,
+    block_size: int = BLOCKSIZE,
     noprogress: bool = False,
 ):
     """Download Sentinel-1 annotation for the specified product urls."""
@@ -251,7 +250,7 @@ def download_annotations(
     *,
     patterns: Optional[List[str]] = None,
     outdir: PathType = ".",
-    auth: Auth = None,
+    auth: Optional[Auth] = None,
     block_size: Optional[int] = BLOCKSIZE,
     noprogress: bool = False,
 ):

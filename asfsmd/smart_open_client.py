@@ -2,7 +2,7 @@
 
 import zipfile
 import contextlib
-from typing import Optional
+from typing import Iterator, Optional
 
 import smart_open
 
@@ -14,15 +14,16 @@ class SmartOpenClient(AbstractClient):
 
     def __init__(self, auth: Auth, block_size: Optional[int] = None):
         """Initialize the smartopen based client."""
-        self.client_kwargs = None
+        client_kwargs = {}
         if auth is not None:
-            self.client_kwargs["user"] = auth.user
-            self.client_kwargs["password"] = auth.pwd
+            client_kwargs["user"] = auth.user
+            client_kwargs["password"] = auth.pwd
         if block_size is not None:
-            self.client_kwargs["buffer_size"] = block_size
+            client_kwargs["buffer_size"] = block_size
+        self.client_kwargs = client_kwargs if client_kwargs else None
 
     @contextlib.contextmanager
-    def open_zip_archive(self, url: Url) -> zipfile.ZipFile:
+    def open_zip_archive(self, url: Url) -> Iterator[zipfile.ZipFile]:
         """Context manager for the remote zip archive."""
         with smart_open.open(url, "rb", **self.client_kwargs) as fd:
             with zipfile.ZipFile(fd) as zf:

@@ -3,6 +3,7 @@
 import io
 import zipfile
 import contextlib
+from typing import Iterator
 
 import httpio
 import requests
@@ -60,7 +61,7 @@ class HttpIOClient(AbstractClient):
         return remote_file.open(session=self._session)
 
     @contextlib.contextmanager
-    def open_zip_archive(self, url: Url) -> zipfile.ZipFile:
+    def open_zip_archive(self, url: Url) -> Iterator[zipfile.ZipFile]:
         """Context manager for the remote zip archive."""
         with self.open(url) as fd:
             with zipfile.ZipFile(fd) as zf:

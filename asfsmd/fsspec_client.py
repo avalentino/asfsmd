@@ -2,7 +2,7 @@
 
 import zipfile
 import contextlib
-from typing import Optional
+from typing import Iterator, Optional
 
 import fsspec
 import aiohttp
@@ -18,8 +18,7 @@ class FsspacClient(AbstractClient):
         client_kwargs = None
         if auth is not None:
             user, pwd = auth
-            auth = aiohttp.BasicAuth(user, pwd)
-            client_kwargs = {"auth": auth}
+            client_kwargs = {"auth": aiohttp.BasicAuth(user, pwd)}
 
         self._fs = fsspec.filesystem(
             "http",
@@ -28,7 +27,7 @@ class FsspacClient(AbstractClient):
         )
 
     @contextlib.contextmanager
-    def open_zip_archive(self, url: Url) -> zipfile.ZipFile:
+    def open_zip_archive(self, url: Url) -> Iterator[zipfile.ZipFile]:
         """Context manager for the remote zip archive."""
         with self._fs.open(url, "rb") as fd:
             with zipfile.ZipFile(fd) as zf:
