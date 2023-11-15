@@ -42,6 +42,7 @@ def _get_client_type():
                 mod = importlib.import_module(name, package=__package__)
                 break
             except ImportError:
+                _log.debug("exception caught:", exc_info=True)
                 pass
         else:
             raise ImportError(
