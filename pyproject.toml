@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0.0", "wheel"]
+requires = ["setuptools>=61.0.0"]
 build-backend = "setuptools.build_meta"
 
 
@@ -31,11 +31,6 @@ dynamic = ["version"]
 
 
 [project.optional-dependencies]
-test = ["pytest", "bitarray>=1.5.1", "bitstruct", "numpy"]
-bs = ["bitstruct"]
-ba = ["bitarray>=1.5.1"]
-np = ["numpy"]
-docs = ["sphinx", "sphinx_rtd_theme"]
 cli = ["argcomplete"]
 httpio = ["httpio", "requests"]
 remotezip = ["remotezip"]
@@ -48,15 +43,15 @@ all = [
 ]
 
 
-[project.urls]
-homepage = "https://github.com/avalentino/asfsmd"
-documentation = "https://github.com/avalentino/asfsmd/blob/main/README.rst"
-repository = "https://github.com/avalentino/asfsmd.git"
-changelog = "https://github.com/avalentino/asfsmd/blob/main/CHANGELOG.rst"
-
-
 [project.scripts]
 asfsmd = "asfsmd.cli:main"
+
+
+[project.urls]
+Homepage = "https://github.com/avalentino/asfsmd"
+Documentation = "https://github.com/avalentino/asfsmd/blob/main/README.rst"
+Repository = "https://github.com/avalentino/asfsmd.git"
+Changelog = "https://github.com/avalentino/asfsmd/blob/main/CHANGELOG.rst"
 
 
 [tool.setuptools]
