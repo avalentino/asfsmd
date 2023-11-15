@@ -24,7 +24,9 @@ classifiers = [
 ]
 dependencies = [
     "fsspec",
+    "aiohttp",
     "asf-search",
+    "asf-search < 6; python_version<'3.8'",
     "tqdm",
 ]
 dynamic = ["version"]
