@@ -103,6 +103,6 @@ Command Line Interface
 License
 -------
 
-Copyright (c) 2021-2022 Antonio Valentino
+Copyright (c) 2021-2023 Antonio Valentino
 
 The `asfsmd` package is distributed under the MIT License.
