@@ -252,7 +252,7 @@ def main(*argv):
     exit_code = EX_OK
     try:
         _log.setLevel(args.loglevel)
-        loglevel = logging.getLevelNamesMapping()[args.loglevel]
+        loglevel = logging.getLevelName(args.loglevel)
         noprogress = bool(loglevel >= logging.ERROR)
 
         auth = _get_auth(user=args.username, pwd=args.password)
