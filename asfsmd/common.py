@@ -8,6 +8,8 @@ MB = 1024 * 1024
 BLOCKSIZE = 16 * MB  # 16MB (64MB is a better choice to download data)
 
 
+# @COMPATIBILITY: requires Python >= 3.9
+# PathType = Union[str, os.PathLike[str]]
 PathType = Union[str, os.PathLike]
 Url = str
 
