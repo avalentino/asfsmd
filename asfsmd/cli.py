@@ -2,13 +2,12 @@
 
 # PYTHON_ARGCOMPLETE_OK
 
-import os
 import json
 import logging
 import pathlib
 import argparse
 import collections
-from typing import Dict, List, Union
+from typing import Dict, Iterable, List, Optional, Union
 
 import tqdm
 
@@ -20,7 +19,7 @@ from .core import (
     make_patterns,
     _get_auth,
 )
-from .common import BLOCKSIZE, MB
+from .common import BLOCKSIZE, MB, PathType
 
 try:
     from os import EX_OK
@@ -32,12 +31,82 @@ EX_INTERRUPT = 130
 LOGFMT = "%(asctime)s %(levelname)-8s -- %(message)s"
 
 
-def _read_from_file(filename: os.PathLike) -> Union[List[str], Dict[str, str]]:
+def _read_from_file(filename: PathType) -> Union[List[str], Dict[str, str]]:
     filename = pathlib.Path(filename)
     if filename.suffix == ".json":
         return json.loads(filename.read_text())
     else:
         return [line for line in filename.read_text().splitlines() if line]
+
+
+def asfsmd_cli(
+    inputs: Iterable[str],
+    beam: Optional[str] = "*",
+    pol: Optional[str] = "??",
+    cal: bool = False,
+    noise: bool = False,
+    rfi: bool = False,
+    data: bool = False,
+    outdir: str = ".",
+    urls: bool = False,
+    file_list: bool = False,
+    block_size: int = BLOCKSIZE,
+    noprogress: bool = False,
+    username: Optional[str] = None,
+    password: Optional[str] = None,
+):
+    """High level function for ASF S1 Metadata Download."""
+    auth = _get_auth(user=username, pwd=password)
+    outroot = pathlib.Path(outdir)
+    patterns = make_patterns(
+        beam=beam,
+        pol=pol,
+        cal=cal,
+        noise=noise,
+        rfi=rfi,
+        data=data,
+    )
+
+    rootkey = ""
+    products_tree = collections.defaultdict(list)
+    if urls:
+        download_components_from_urls(
+            inputs,
+            patterns=patterns,
+            outdir=outroot,
+            auth=auth,
+            block_size=block_size,
+            noprogress=noprogress,
+        )
+    else:
+        if file_list:
+            for filename in inputs:
+                new_products = _read_from_file(filename)
+                if isinstance(new_products, list):
+                    products_tree[rootkey].extend(new_products)
+                else:
+                    assert isinstance(new_products, dict)
+                    products_tree.update(new_products)
+        else:
+            # Ignore if user passed files with .zip or .SAFE extensions
+            products_tree[""].extend(
+                p.replace(".zip", "").replace(".SAFE", "") for p in inputs
+            )
+
+        items = pbar = tqdm.tqdm(products_tree.items(), disable=noprogress)
+        for folder, products in items:
+            pbar.set_description(folder if folder else "DOWNLOAD")
+            outpath = outroot / folder
+            download_annotations(
+                products,
+                outdir=outpath,
+                auth=auth,
+                patterns=patterns,
+                block_size=block_size,
+                noprogress=noprogress,
+            )
+
+    return EX_OK
 
 
 def _autocomplete(parser):
@@ -255,60 +324,22 @@ def main(*argv):
         loglevel = logging.getLevelName(args.loglevel)
         noprogress = bool(loglevel >= logging.ERROR)
 
-        auth = _get_auth(user=args.username, pwd=args.password)
-        outroot = pathlib.Path(args.outdir)
-        patterns = make_patterns(
+        exit_code = asfsmd_cli(
+            inputs=args.inputs,
             beam=args.beam,
             pol=args.pol,
             cal=args.cal,
             noise=args.noise,
             rfi=args.rfi,
             data=args.data,
+            outdir=args.outdir,
+            urls=args.urls,
+            file_list=args.file_list,
+            block_size=args.black_size * MB,
+            noprogress=noprogress,
+            username=args.username,
+            password=args.password,
         )
-
-        rootkey = ""
-        products_tree = collections.defaultdict(list)
-        if args.urls:
-            urls = args.inputs
-            download_components_from_urls(
-                urls,
-                patterns=patterns,
-                outdir=outroot,
-                auth=auth,
-                block_size=args.block_size * MB,
-                noprogress=noprogress,
-            )
-        else:
-            if args.file_list:
-                for filename in args.inputs:
-                    filename = pathlib.Path(filename)
-                    new_product = _read_from_file(filename)
-                    if isinstance(new_product, list):
-                        products_tree[rootkey].extend(new_product)
-                    else:
-                        assert isinstance(new_product, dict)
-                        products_tree.update(new_product)
-            else:
-                # Ignore if user passed files with .zip or .SAFE extensions
-                inputs = [
-                    p.replace(".zip", "").replace(".SAFE", "")
-                    for p in args.inputs
-                ]
-                products_tree[""].extend(inputs)
-
-            items = pbar = tqdm.tqdm(products_tree.items(), disable=noprogress)
-            for folder, products in items:
-                pbar.set_description(folder if folder else "DOWNLOAD")
-                outpath = outroot / folder
-                download_annotations(
-                    products,
-                    outdir=outpath,
-                    auth=auth,
-                    patterns=patterns,
-                    block_size=args.block_size * MB,
-                    noprogress=noprogress,
-                )
-
     except Exception as exc:
         _log.critical(
             "unexpected exception caught: {!r} {}".format(
