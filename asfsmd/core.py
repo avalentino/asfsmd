@@ -72,13 +72,13 @@ def query(products):
 
 
 def make_patterns(
-    beam="*",
-    pol="??",
-    cal=False,
-    noise=False,
-    rfi=False,
-    data=False,
-):
+    beam: Optional[str] = "*",
+    pol: Optional[str] = "??",
+    cal: bool = False,
+    noise: bool = False,
+    rfi: bool = False,
+    data: bool = False,
+) -> List[str]:
     """Generate a list of patterns according to the specified options.
 
     Patterns are used to match components in the ZIP archive of the
@@ -270,7 +270,7 @@ def download_annotations(
         patterns=patterns,
         outdir=outdir,
         auth=auth,
-        block_size=block_size,
+        block_size=block_size if block_size is not None else BLOCKSIZE,
         noprogress=noprogress,
     )
 
