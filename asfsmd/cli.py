@@ -323,7 +323,7 @@ def main(*argv):
             outdir=args.outdir,
             urls=args.urls,
             file_list=args.file_list,
-            block_size=args.black_size * MB,
+            block_size=args.block_size * MB,
             noprogress=noprogress,
             username=args.username,
             password=args.password,
