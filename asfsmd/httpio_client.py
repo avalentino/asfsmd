@@ -1,9 +1,8 @@
 """Asfsmd client based on httpio and requests."""
 
-import io
 import zipfile
 import contextlib
-from typing import Iterator
+from typing import IO, Iterator, Optional
 
 import httpio
 import requests
@@ -14,10 +13,11 @@ from .common import AbstractClient, Auth, BLOCKSIZE, Url
 class HttpIOFile(httpio.SyncHTTPIOFile):
     """Class to represent an file-like object accessed via HTTP."""
 
-    def open(self, session=None):  # noqa: A003
+    def open(self, session: Optional[requests.Session] = None):  # noqa: A003
         """Open the remote file."""
         self._assert_not_closed()
         if not self._closing and self._session is None:
+            self._session: requests.Session
             self._session = requests.Session() if session is None else session
             response = self._session.get(self.url, stream=True, **self._kwargs)
             with response:
@@ -48,11 +48,7 @@ class HttpIOClient(AbstractClient):
     def __exit__(self, exc_type, exc_value, traceback):  # noqa: D105
         self._session.close()
 
-    def open(  # noqa: A003
-        self,
-        url: Url,
-        mode: str = "rb",
-    ) -> io.BufferedIOBase:
+    def open(self, url: Url, mode: str = "rb") -> IO[bytes]:  # noqa: A003
         """Open a remote file."""
         if mode != "rb":
             raise ValueError("invalid mode: {mode!r}")

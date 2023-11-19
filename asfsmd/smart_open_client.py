@@ -2,7 +2,7 @@
 
 import zipfile
 import contextlib
-from typing import Iterator, Optional
+from typing import Any, Dict, Iterator, Optional
 
 import smart_open
 
@@ -14,7 +14,7 @@ class SmartOpenClient(AbstractClient):
 
     def __init__(self, auth: Auth, block_size: Optional[int] = None):
         """Initialize the smartopen based client."""
-        client_kwargs = {}
+        client_kwargs: Dict[str, Any] = {}
         if auth is not None:
             client_kwargs["user"] = auth.user
             client_kwargs["password"] = auth.pwd
