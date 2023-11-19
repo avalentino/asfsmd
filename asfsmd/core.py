@@ -1,4 +1,4 @@
-"""Core functiond for the ASF Sentinel-1 Metadata Download tool."""
+"""Core functions for the ASF Sentinel-1 Metadata Download tool."""
 
 import os
 import netrc
