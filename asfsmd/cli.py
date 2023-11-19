@@ -7,7 +7,7 @@ import logging
 import pathlib
 import argparse
 import collections
-from typing import Dict, Iterable, List, Optional, Union
+from typing import Dict, Iterable, List, Optional
 
 import tqdm
 
@@ -19,6 +19,7 @@ from .core import (
     make_patterns,
     _get_auth,
 )
+from ._utils import unique
 from .common import BLOCKSIZE, MB, PathType
 
 try:
@@ -31,12 +32,21 @@ EX_INTERRUPT = 130
 LOGFMT = "%(asctime)s %(levelname)-8s -- %(message)s"
 
 
-def _read_from_file(filename: PathType) -> Union[List[str], Dict[str, str]]:
-    filename = pathlib.Path(filename)
-    if filename.suffix == ".json":
-        return json.loads(filename.read_text())
-    else:
-        return [line for line in filename.read_text().splitlines() if line]
+def _load_product_lists(*filenames: PathType) -> Dict[str, List[str]]:
+    data: Dict[str, List[str]] = collections.defaultdict(list)
+    for filename in filenames:
+        filename = pathlib.Path(filename)
+        if filename.suffix == ".json":
+            data.update(json.loads(filename.read_text()))
+        else:
+            with filename.open() as fd:
+                for line in fd:
+                    line = line.strip()
+                    if not line or line.startswith("#"):
+                        continue
+                    data[""].append(line)
+
+    return {key: unique(values) for key, values in data.items()}
 
 
 def asfsmd_cli(
@@ -67,8 +77,6 @@ def asfsmd_cli(
         data=data,
     )
 
-    rootkey = ""
-    products_tree = collections.defaultdict(list)
     if urls:
         download_components_from_urls(
             inputs,
@@ -79,18 +87,15 @@ def asfsmd_cli(
             noprogress=noprogress,
         )
     else:
+        products_tree: Dict[str, List[str]] = collections.defaultdict(list)
         if file_list:
-            for filename in inputs:
-                new_products = _read_from_file(filename)
-                if isinstance(new_products, list):
-                    products_tree[rootkey].extend(new_products)
-                else:
-                    assert isinstance(new_products, dict)
-                    products_tree.update(new_products)
+            products_tree = _load_product_lists(*inputs)
         else:
             # Ignore if user passed files with .zip or .SAFE extensions
             products_tree[""].extend(
-                p.replace(".zip", "").replace(".SAFE", "") for p in inputs
+                unique(
+                    p.replace(".zip", "").replace(".SAFE", "") for p in inputs
+                )
             )
 
         items = pbar = tqdm.tqdm(products_tree.items(), disable=noprogress)
