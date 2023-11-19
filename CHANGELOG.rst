@@ -1,10 +1,18 @@
 asfsmd release history
 ======================
 
-asfsmd v1.4.1 (UNRELEASED)
+asfsmd v1.4.1 (19/11/2023)
 --------------------------
 
-* TBW
+* Disable progress in quiet mode.
+* Do not try to download products already on disk.
+* Add masic unit testing.
+* Enable GHA CI.
+* Fix dependencies in `pyproject.toml`
+* Improve typing annotations.
+* Linting and formatting.
+* Improved loading of product lists from file (refactoring).
+* New `--noprogress` CLI option.
 
 
 asfsmd v1.4.0 (05/02/2023)
