@@ -1,6 +1,11 @@
 """Utility functions for asfsmd."""
 
-from typing import Any, Iterable, List
+import json
+import pathlib
+import collections
+from typing import Any, Dict, Iterable, List
+
+from .common import PathType
 
 
 def unique(data: Iterable[Any]) -> List[Any]:
@@ -12,3 +17,21 @@ def unique(data: Iterable[Any]) -> List[Any]:
             unique_items.append(item)
             unique_items_set.add(item)
     return unique_items
+
+
+def load_product_lists(*filenames: PathType) -> Dict[str, List[str]]:
+    """Load product list form files."""
+    data: Dict[str, List[str]] = collections.defaultdict(list)
+    for filename in filenames:
+        filename = pathlib.Path(filename)
+        if filename.suffix == ".json":
+            data.update(json.loads(filename.read_text()))
+        else:
+            with filename.open() as fd:
+                for line in fd:
+                    line = line.strip()
+                    if not line or line.startswith("#"):
+                        continue
+                    data[""].append(line)
+
+    return {key: unique(values) for key, values in data.items()}

@@ -2,7 +2,7 @@
 
 # PYTHON_ARGCOMPLETE_OK
 
-import json
+
 import logging
 import pathlib
 import argparse
@@ -19,8 +19,8 @@ from .core import (
     make_patterns,
     _get_auth,
 )
-from ._utils import unique
-from .common import BLOCKSIZE, MB, PathType
+from ._utils import unique, load_product_lists
+from .common import BLOCKSIZE, MB
 
 try:
     from os import EX_OK
@@ -30,23 +30,6 @@ EX_FAILURE = 1
 EX_INTERRUPT = 130
 
 LOGFMT = "%(asctime)s %(levelname)-8s -- %(message)s"
-
-
-def _load_product_lists(*filenames: PathType) -> Dict[str, List[str]]:
-    data: Dict[str, List[str]] = collections.defaultdict(list)
-    for filename in filenames:
-        filename = pathlib.Path(filename)
-        if filename.suffix == ".json":
-            data.update(json.loads(filename.read_text()))
-        else:
-            with filename.open() as fd:
-                for line in fd:
-                    line = line.strip()
-                    if not line or line.startswith("#"):
-                        continue
-                    data[""].append(line)
-
-    return {key: unique(values) for key, values in data.items()}
 
 
 def asfsmd_cli(
@@ -89,7 +72,7 @@ def asfsmd_cli(
     else:
         products_tree: Dict[str, List[str]] = collections.defaultdict(list)
         if file_list:
-            products_tree = _load_product_lists(*inputs)
+            products_tree = load_product_lists(*inputs)
         else:
             # Ignore if user passed files with .zip or .SAFE extensions
             products_tree[""].extend(
