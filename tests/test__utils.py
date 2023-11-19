@@ -1,9 +1,10 @@
 """Unit tests for the `asfsmd._utils` module."""
 
 import itertools
-from asfsmd._utils import unique
 
 import pytest
+
+from asfsmd._utils import unique
 
 
 @pytest.mark.parametrize(
@@ -16,7 +17,8 @@ import pytest
         pytest.param(
             itertools.chain(range(3, 0, -1), range(3)),
             [3, 2, 1, 0],
-            id="reversed-generator"),
+            id="reversed-generator",
+        ),
     ],
 )
 def test_unique(in_, out):

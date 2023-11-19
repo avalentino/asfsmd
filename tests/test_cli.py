@@ -1,11 +1,8 @@
 """Unit tests for the asfsmd.cli module."""
 
-import json
-import pathlib
+import pytest
 
 from asfsmd.cli import _load_product_lists
-
-import pytest
 
 
 @pytest.mark.parametrize(
@@ -86,7 +83,7 @@ import pytest
             },
             id="duplicate",
         ),
-    ]
+    ],
 )
 def test__load_product_lists_json(idata, odata, tmp_path):
     jsonfile = tmp_path / "productlist.json"
@@ -148,7 +145,7 @@ filelist03.txt
             },
             id="duplicate",
         ),
-pytest.param(
+        pytest.param(
             """\
 # comment
 filelist01.txt
@@ -163,7 +160,7 @@ filelist02.txt
             },
             id="duplicate-with-comments-and-empty-lines",
         ),
-    ]
+    ],
 )
 def test__load_product_lists_text(idata, odata, tmp_path):
     textfile = tmp_path / "productlist.txt"
@@ -195,20 +192,20 @@ filelist02.txt
             {
                 "": [
                     "filelist01.txt",
-                    "filelist02.txt"
+                    "filelist02.txt",
                 ],
                 "a": [
                     "a01.txt",
-                    "a02.txt"
+                    "a02.txt",
                 ],
                 "b/1": [
                     "b01.txt",
-                    "b02.txt"
-                ]
+                    "b02.txt",
+                ],
             },
             id="unique",
         ),
-                pytest.param(
+        pytest.param(
             """\
 {
   "": [
@@ -234,12 +231,12 @@ filelist03.txt
                 ],
                 "a": [
                     "a01.txt",
-                    "a02.txt"
+                    "a02.txt",
                 ],
             },
             id="duplicate",
         ),
-    ]
+    ],
 )
 def test__load_product_lists_multifile(jsondata, textdata, odata, tmp_path):
     jsonfile = tmp_path / "jsonfile.json"
@@ -248,4 +245,3 @@ def test__load_product_lists_multifile(jsondata, textdata, odata, tmp_path):
     textfile.write_text(textdata)
     data = _load_product_lists(jsonfile, textfile)
     assert data == odata
-

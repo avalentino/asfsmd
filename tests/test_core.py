@@ -6,7 +6,7 @@ import pathlib
 import zipfile
 from typing import List, Optional
 from unittest import mock
-from xml.etree import ElementTree as etree
+from xml.etree import ElementTree as etree  # noqa: N813
 
 import pytest
 
@@ -76,16 +76,14 @@ class DummyProductWriter:
     DEFAULT_DATA_SIZE = 8 * 1024  # 4k
 
     def __init__(self, components: Optional[List[str]] = None):
-        self._xmldoc = None
-        self._path = None
+        self._path: Optional[pathlib.Path] = None
         if components is None:
             components = [
                 "./annotation/s1a-iw1-slc-vv-20230222t051014-20230222t051042-047344-05aecf-001.xml",  # noqa: E501
                 "./annotation/s1a-iw2-slc-vv-20230222t051014-20230222t051042-047344-05aecf-002.xml",  # noqa: E501
                 "./annotation/s1a-iw3-slc-vv-20230222t051014-20230222t051042-047344-05aecf-003.xml",  # noqa: E501
             ]
-            components = {path: self.DEFAULT_DATA_SIZE for path in components}
-        self.components = components
+        self.components = {path: self.DEFAULT_DATA_SIZE for path in components}
 
     def _create_data_object(self, path: pathlib.Path, size: int):
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -115,20 +113,14 @@ class DummyProductWriter:
         data_object_section = etree.SubElement(root, "dataObjectSection")
         for path, size in self.components.items():
             assert self._path
-            path = self._path / path
-            elem = self._create_data_object(path, size)
+            elem = self._create_data_object(self._path / path, size)
             data_object_section.append(elem)
         return etree.ElementTree(root)
-
-    def _get_manifets_xmldoc(self):
-        if self._xmldoc is None:
-            self._xmldoc = self._create_xmldco()
-        return self._xmldoc
 
     def write(self, path: pathlib.Path):
         try:
             self._path = path
-            manifest_path = self._path / "manifest.safe"
+            manifest_path = path / "manifest.safe"
             xmldoc = self._create_xmldoc()
             xmldoc.write(manifest_path)
         finally:
