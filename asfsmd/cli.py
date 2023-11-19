@@ -262,6 +262,9 @@ def _get_parser(subparsers=None):
     parser.add_argument(
         "--data", action="store_true", help="Download measurement files."
     )
+    parser.add_argument(
+        "--noprogress", action="store_true", help="Disable teh progress bar."
+    )
 
     # Positional arguments
     parser.add_argument(
@@ -308,9 +311,7 @@ def main(*argv):
     # execute main tasks
     exit_code = EX_OK
     try:
-        _log.setLevel(args.loglevel)
-        loglevel = logging.getLevelName(args.loglevel)
-        noprogress = bool(loglevel >= logging.ERROR)
+        logging.getLogger().setLevel(args.loglevel)
 
         exit_code = asfsmd_cli(
             inputs=args.inputs,
@@ -324,7 +325,7 @@ def main(*argv):
             urls=args.urls,
             file_list=args.file_list,
             block_size=args.block_size * MB,
-            noprogress=noprogress,
+            noprogress=args.noprogress,
             username=args.username,
             password=args.password,
         )
