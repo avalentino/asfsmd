@@ -34,4 +34,10 @@ def load_product_lists(*filenames: PathType) -> Dict[str, List[str]]:
                         continue
                     data[""].append(line)
 
-    return {key: unique(values) for key, values in data.items()}
+    # Strip .zip or .SAFE extensions
+    return {
+        key: unique(
+            item.replace(".zip", "").replace(".SAFE", "") for item in values
+        )
+        for key, values in data.items()
+    }
