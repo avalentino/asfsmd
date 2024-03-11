@@ -263,7 +263,7 @@ def _get_parser(subparsers=None):
         "--data", action="store_true", help="Download measurement files."
     )
     parser.add_argument(
-        "--noprogress", action="store_true", help="Disable teh progress bar."
+        "--noprogress", action="store_true", help="Disable the progress bar."
     )
 
     # Positional arguments
